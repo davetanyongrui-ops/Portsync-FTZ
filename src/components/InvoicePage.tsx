@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Eye, Maximize, Minus, Plus, ScanLine } from "lucide-react";
+import { Maximize, Minus, Plus, ScanLine } from "lucide-react";
 import type { DemoInvoice, LineCalc } from "../types";
 import { fmtQty, fmtUsd } from "../lib/format";
 import { cn } from "../lib/cn";
-import { Btn } from "./ui";
 
 const PAGE_W = 760;
 const HEAD_H = 112;
@@ -17,20 +16,18 @@ const ZOOMS = [0.62, 0.78, 1, 1.25];
 const COLS = "24px 1fr 30px 58px 30px 66px 82px";
 
 const zoomBtn =
-  "grid size-7 place-items-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-slate-500";
+  "grid size-7 place-items-center rounded-md border border-zinc-700 bg-zinc-800 text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white disabled:opacity-30 disabled:hover:bg-zinc-800 disabled:hover:text-zinc-300";
 
 export function InvoicePage({
   invoice,
   calcs,
   analyzed,
-  analyzing,
   activeId,
   onActive,
 }: {
   invoice: DemoInvoice;
   calcs: LineCalc[];
   analyzed: boolean;
-  analyzing: boolean;
   activeId: string | null;
   onActive: (id: string | null) => void;
 }) {
@@ -55,19 +52,25 @@ export function InvoicePage({
   const isRaster = invoice.kind === "PNG";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
-      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-slate-200 px-3">
-        <ScanLine size={14} className="shrink-0 text-blue-600" />
-        <span className="truncate text-[12.5px] font-medium text-slate-800">{invoice.fileName}</span>
-        <span className="tnum hidden shrink-0 text-[11px] text-slate-500 sm:inline">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-xs">
+      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-zinc-800 px-3 bg-zinc-950/60">
+        <ScanLine size={14} className="shrink-0 text-cyan-400" />
+        <span className="truncate text-[12.5px] font-medium text-zinc-200">{invoice.fileName}</span>
+        <span className="tnum hidden shrink-0 text-[11px] text-zinc-400 sm:inline">
           {invoice.pages} pg · {invoice.sizeKb} kB · {isRaster ? "300 dpi raster" : "text layer"}
         </span>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          <button type="button" onClick={() => setZoomIdx((i) => Math.max(0, i - 1))} className={zoomBtn} disabled={zoomIdx === 0} aria-label="Zoom out">
+          <button
+            type="button"
+            onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}
+            className={zoomBtn}
+            disabled={zoomIdx === 0}
+            aria-label="Zoom out"
+          >
             <Minus size={13} />
           </button>
-          <span className="tnum w-11 text-center text-[11.5px] text-slate-500">{Math.round(zoom * 100)}%</span>
+          <span className="tnum w-11 text-center text-[11.5px] text-zinc-400">{Math.round(zoom * 100)}%</span>
           <button
             type="button"
             onClick={() => setZoomIdx((i) => Math.min(ZOOMS.length - 1, i + 1))}
@@ -77,7 +80,12 @@ export function InvoicePage({
           >
             <Plus size={13} />
           </button>
-          <button type="button" onClick={() => setZoomIdx(1)} className={cn(zoomBtn, "ml-1")} aria-label="Fit page">
+          <button
+            type="button"
+            onClick={() => setZoomIdx(1)}
+            className={cn(zoomBtn, "ml-1")}
+            aria-label="Fit page"
+          >
             <Maximize size={13} />
           </button>
         </div>
@@ -85,11 +93,11 @@ export function InvoicePage({
 
       <div
         ref={viewRef}
-        className="scroll-thin dotgrid relative min-h-0 flex-1 overflow-auto bg-slate-100/60 p-5"
+        className="scroll-thin dotgrid relative min-h-0 flex-1 overflow-auto bg-zinc-950/90 p-5"
         onClick={() => onActive(null)}
       >
         <div
-          className="paper-shadow relative origin-top-left overflow-hidden rounded-lg"
+          className="paper-shadow relative origin-top-left overflow-hidden rounded-lg mx-auto"
           style={{ width: PAGE_W * zoom, height: pageH * zoom }}
         >
           <div
@@ -107,15 +115,15 @@ export function InvoicePage({
             {/* letterhead */}
             <div className="flex items-start justify-between px-[34px] pt-[26px]" style={{ height: HEAD_H }}>
               <div className="max-w-[380px]">
-                <div className="text-[15px] leading-tight font-bold tracking-tight">{invoice.supplier.name}</div>
+                <div className="text-[15px] leading-tight font-bold tracking-tight text-slate-900">{invoice.supplier.name}</div>
                 <div className="mt-1 text-[9.5px] leading-[1.5] text-[#4a5666]">{invoice.supplier.addr}</div>
                 <div className="text-[9.5px] text-[#4a5666]">{invoice.supplier.taxId}</div>
-                <div className="mt-2 inline-block border border-[#b9c3d0] px-1.5 py-px text-[8.5px] tracking-[0.14em] text-[#39445a] uppercase">
+                <div className="mt-2 inline-block border border-[#b9c3d0] px-1.5 py-px text-[8.5px] tracking-[0.14em] text-[#39445a] uppercase bg-white/60">
                   Reg. No. {invoice.supplier.taxId.replace(/\D/g, "").slice(0, 9) || "000000000"}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[13px] font-bold tracking-[0.1em]">
+                <div className="text-[13px] font-bold tracking-[0.1em] text-slate-900">
                   {isRaster ? "SEA WAYBILL / MANIFEST" : "COMMERCIAL INVOICE"}
                 </div>
                 <div className="mt-1 text-[9px] tracking-[0.1em] text-[#5a6678]">
@@ -135,7 +143,7 @@ export function InvoicePage({
             >
               <div>
                 <div className="text-[8px] tracking-[0.18em] text-[#7b8798] uppercase">Consignee / Importer</div>
-                <div className="mt-1 text-[10.5px] font-bold">{invoice.consignee.name}</div>
+                <div className="mt-1 text-[10.5px] font-bold text-slate-900">{invoice.consignee.name}</div>
                 <div className="text-[9px] leading-[1.55] text-[#4a5666]">{invoice.consignee.addr}</div>
                 <div className="mt-1 text-[9px] text-[#4a5666]">NPWP {invoice.consignee.taxId}</div>
                 <div className="text-[9px] text-[#4a5666]">
@@ -178,6 +186,7 @@ export function InvoicePage({
               <span className="text-right">Amount</span>
             </div>
 
+            {/* line items */}
             {invoice.lines.map((l) => {
               const c = calcByPos.get(l.pos);
               return (
@@ -214,7 +223,10 @@ export function InvoicePage({
                 <div className="w-[230px] text-[9.5px]">
                   {[
                     ["Total Net Weight", `${fmtQty(invoice.lines.reduce((a, l) => a + l.netKg, 0))} KGM`],
-                    ["CIF Invoice Total", `USD ${fmtUsd(invoice.lines.reduce((a, l) => a + l.qty * l.unitCifUsd, 0)).replace("$ ", "")}`],
+                    [
+                      "CIF Invoice Total",
+                      `USD ${fmtUsd(invoice.lines.reduce((a, l) => a + l.qty * l.unitCifUsd, 0)).replace("$ ", "")}`,
+                    ],
                   ].map(([k, v]) => (
                     <div key={k} className="flex justify-between border-t border-[#9aa6b6] py-1">
                       <span className="text-[#4a5666]">{k}</span>
@@ -246,8 +258,10 @@ export function InvoicePage({
                       onActive(active ? null : l.id);
                     }}
                     className={cn(
-                      "animate-draw absolute cursor-pointer rounded-md border bg-blue-500/10 transition-shadow duration-150",
-                      active ? "border-blue-400 bg-blue-500/20 shadow-[0_0_0_3px_rgba(59,130,246,0.22)]" : "border-blue-500/60",
+                      "animate-draw absolute cursor-pointer rounded-md border bg-cyan-500/10 transition-shadow duration-150",
+                      active
+                        ? "border-cyan-400 bg-cyan-500/25 shadow-[0_0_0_3px_rgba(6,182,212,0.45)] ring-2 ring-cyan-400"
+                        : "border-cyan-500/60 hover:border-cyan-400",
                     )}
                     style={{
                       left: l.span.x * PAGE_W,
@@ -260,8 +274,8 @@ export function InvoicePage({
                   >
                     <span
                       className={cn(
-                        "tnum absolute -top-[9px] left-0 rounded-[3px] px-1.5 py-px text-[7.5px] leading-[13px] font-bold tracking-[0.04em] whitespace-nowrap text-white",
-                        active ? "bg-blue-600" : "bg-blue-600/80",
+                        "tnum absolute -top-[9px] left-0 rounded-[3px] px-1.5 py-px text-[7.5px] leading-[13px] font-bold tracking-[0.04em] whitespace-nowrap text-zinc-950",
+                        active ? "bg-cyan-400 font-extrabold" : "bg-cyan-400/90",
                       )}
                     >
                       {c.hs} · {Math.round(c.confidence * 100)}%
@@ -269,37 +283,7 @@ export function InvoicePage({
                   </div>
                 );
               })}
-
-            {analyzing && (
-              <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div className="animate-sweep absolute inset-y-0 w-[38%] bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
-              </div>
-            )}
           </div>
-        </div>
-
-        {!analyzed && !analyzing && (
-          <div className="pointer-events-none absolute inset-x-8 bottom-6 flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white/90 py-2 text-[11.5px] text-slate-600 backdrop-blur">
-            <Eye size={12} className="text-slate-500" />
-            Raw document — no detections yet. Run the agent to overlay parsed line items.
-          </div>
-        )}
-      </div>
-
-      <div className="flex h-9 shrink-0 items-center gap-4 border-t border-slate-200 px-3">
-        <span className="text-[11px] text-slate-500">Detection overlay</span>
-        <span className="flex items-center gap-1.5 text-[11px] text-slate-600">
-          <span className="size-2.5 rounded-[3px] border border-blue-500/60 bg-blue-500/10" />
-          parsed line
-        </span>
-        <span className="flex items-center gap-1.5 text-[11px] text-slate-600">
-          <span className="size-2.5 rounded-[3px] border border-blue-400 bg-blue-500/20 shadow-[0_0_0_2px_rgba(59,130,246,0.22)]" />
-          in focus
-        </span>
-        <div className="ml-auto">
-          <Btn size="sm" variant="ghost" onClick={() => onActive(null)} disabled={!activeId}>
-            Clear focus
-          </Btn>
         </div>
       </div>
     </div>

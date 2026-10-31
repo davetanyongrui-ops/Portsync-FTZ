@@ -5,6 +5,9 @@ import { REGIME_LABELS, type Regime } from "../lib/engine";
 import { fmtIdr } from "../lib/format";
 import { getFtaRecommendation } from "../lib/ftaAdvisor";
 import { KpiRow } from "./KpiRow";
+import { DeclarationTable } from "./DeclarationTable";
+import { ActionFooter } from "./ActionFooter";
+import { Btn, Label, Pill } from "./ui";
 
 const BERTHS = [
   { label: "Batam, Indonesia (KPBPB FTZ)", regime: "PPFTZ-01" as Regime },
@@ -12,9 +15,6 @@ const BERTHS = [
   { label: "Surabaya, Indonesia (Tanjung Perak)", regime: "PPFTZ-03" as Regime },
   { label: "Singapore", regime: "PPFTZ-01" as Regime },
 ];
-import { DeclarationTable } from "./DeclarationTable";
-import { ActionFooter } from "./ActionFooter";
-import { Btn, Label, Pill } from "./ui";
 
 export function RightPanel({
   invoice,
@@ -29,7 +29,7 @@ export function RightPanel({
   onOverride,
   onDownloadXml,
   onOpenPayload,
-  regime,
+  regime = "PPFTZ-01",
   onRegimeChange,
 }: {
   invoice: DemoInvoice;
@@ -44,18 +44,22 @@ export function RightPanel({
   onOverride: (id: string, hs: string) => void;
   onDownloadXml: () => void;
   onOpenPayload: () => void;
-  regime: Regime;
-  onRegimeChange: (r: Regime) => void;
+  regime?: Regime;
+  onRegimeChange?: (r: Regime) => void;
 }) {
   const overrides = calcs.filter((c) => c.overridden).length;
   const allSelected = ready && calcs.every((c) => selectedIds.has(c.id));
   const [berth, setBerth] = useState(BERTHS[0]!.label);
 
+  const handleRegimeChange = (r: Regime) => {
+    if (onRegimeChange) onRegimeChange(r);
+  };
+
   return (
-    <section className="scroll-thin flex h-full min-h-0 w-full flex-col gap-4 overflow-y-auto bg-white p-5 lg:p-6">
+    <section className="scroll-thin flex h-full min-h-0 w-full flex-col gap-4 overflow-y-auto bg-zinc-950 p-5 lg:p-6">
       <div className="flex shrink-0 flex-wrap items-center gap-2.5">
-        <Radar size={16} className="shrink-0 text-blue-600" />
-        <h2 className="truncate text-[13.5px] font-semibold tracking-tight text-slate-900">
+        <Radar size={16} className="shrink-0 text-cyan-400" />
+        <h2 className="truncate text-[13.5px] font-semibold tracking-tight text-zinc-100">
           Agent Output &amp; Declaration Engine
         </h2>
         <Pill tone="mut" title="Reference register, deterministic output. No CEISA dispatch.">
@@ -63,25 +67,25 @@ export function RightPanel({
         </Pill>
         <div className="ml-auto flex items-center gap-3">
           {overrides > 0 && <Pill tone="warn">{overrides} HS override{overrides > 1 ? "s" : ""}</Pill>}
-          <span className="tnum hidden text-[11.5px] text-slate-500 md:inline">{invoice.docNo}</span>
+          <span className="tnum hidden text-[11.5px] text-zinc-400 font-mono md:inline">{invoice.docNo}</span>
           <Btn size="sm" variant="ghost" onClick={() => onSelectAll(!allSelected)} disabled={!ready}>
             {allSelected ? "Deselect all" : "Select all"}
           </Btn>
         </div>
       </div>
 
-      <div className="shrink-0 space-y-1.5">
+      <div className="shrink-0 space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
         <div className="flex items-center gap-2">
-          <MapPin size={13} className="text-slate-500" />
-          <span className="text-[11.5px] font-medium text-slate-600">Berth / Destination</span>
+          <MapPin size={13} className="text-zinc-400" />
+          <span className="text-[11.5px] font-medium text-zinc-300">Berth / Destination</span>
           <select
             value={berth}
             onChange={(e) => {
               setBerth(e.target.value);
               const b = BERTHS.find((x) => x.label === e.target.value);
-              if (b) onRegimeChange(b.regime);
+              if (b) handleRegimeChange(b.regime);
             }}
-            className="ml-auto rounded-lg border border-slate-200 bg-white px-2 py-1 text-[12px] text-slate-800 shadow-2xs"
+            className="ml-auto rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[12px] text-zinc-200 shadow-2xs hover:border-zinc-600 focus:outline-none"
           >
             {BERTHS.map((b) => (
               <option key={b.label} value={b.label}>
@@ -93,7 +97,7 @@ export function RightPanel({
         <div
           role="tablist"
           aria-label="Declaration regime"
-          className="flex gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-slate-100 p-1"
+          className="flex gap-2 overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-1"
         >
           {(["PPFTZ-01", "PPFTZ-02", "PPFTZ-03"] as Regime[]).map((r) => (
             <button
@@ -102,61 +106,61 @@ export function RightPanel({
               role="tab"
               aria-selected={regime === r}
               data-regime={r}
-              onClick={() => onRegimeChange(r)}
+              onClick={() => handleRegimeChange(r)}
               className={
                 regime === r
-                  ? "shrink-0 rounded-lg border border-blue-200 bg-white px-4 py-1.5 text-[12px] font-bold text-blue-700 shadow-2xs transition-colors"
-                  : "shrink-0 rounded-lg border border-transparent px-4 py-1.5 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white/60 hover:text-slate-800"
+                  ? "shrink-0 rounded-md border border-cyan-500/40 bg-cyan-500/10 px-4 py-1.5 text-[12px] font-bold text-cyan-300 shadow-2xs transition-colors"
+                  : "shrink-0 rounded-md border border-transparent px-4 py-1.5 text-[12px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800/60 hover:text-zinc-200"
               }
             >
               {r}
             </button>
           ))}
         </div>
-        <p className="text-[11.5px] text-slate-500">{REGIME_LABELS[regime]}</p>
+        <p className="text-[11.5px] text-zinc-400">{REGIME_LABELS[regime]}</p>
       </div>
 
       <KpiRow invoice={invoice} totals={totals} calcs={calcs} ready={ready} />
 
-      <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-        <div className="text-[12.5px] font-semibold tracking-tight text-slate-900">Tax &amp; Duty Summary</div>
-        <p className="mt-1 text-[11.5px] text-slate-500">
+      <div className="shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-xs">
+        <div className="text-[12.5px] font-semibold tracking-tight text-zinc-200">Tax &amp; Duty Summary</div>
+        <p className="mt-1 text-[11.5px] text-zinc-400">
           {regime === "PPFTZ-03"
             ? "Mainland release: all lines pay standard duty + 11% PPN."
             : regime === "PPFTZ-02"
               ? "Zone-to-zone transfer: no tax or duty."
-              : "In-zone facility: duty &amp; PPN suspended while goods stay in the enclave."}
+              : "In-zone facility: duty & PPN suspended while goods stay in the enclave."}
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-emerald-700">Tax-free / Exempt</div>
-            <div className="tnum mt-1 text-[15px] font-bold text-emerald-700">
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-emerald-400">Tax-free / Exempt</div>
+            <div className="tnum mt-1 text-[15px] font-bold text-emerald-300">
               {ready ? fmtIdr(totals.saved) : "—"}
             </div>
-            <div className="mt-1 text-[11.5px] text-emerald-700/80">
+            <div className="mt-1 text-[11.5px] text-emerald-400/80">
               {ready ? `${calcs.filter((c) => c.payable === 0).length} of ${calcs.length} lines` : "—"}
             </div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-amber-700">Payable (duty + PPN)</div>
-            <div className="tnum mt-1 text-[15px] font-bold text-amber-700">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-amber-400">Payable (duty + PPN)</div>
+            <div className="tnum mt-1 text-[15px] font-bold text-amber-300">
               {ready ? fmtIdr(totals.payable) : "—"}
             </div>
-            <div className="mt-1 text-[11.5px] text-amber-700/80">
+            <div className="mt-1 text-[11.5px] text-amber-400/80">
               {ready ? `${calcs.filter((c) => c.payable > 0).length} of ${calcs.length} lines` : "—"}
             </div>
           </div>
         </div>
         {ready && calcs.some((c) => c.payable > 0) && (
-          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Items that must pay</div>
-            <ul className="mt-2 space-y-1.5 text-[12px] text-slate-700">
+          <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Items that must pay</div>
+            <ul className="mt-2 space-y-1.5 text-[12px] text-zinc-300">
               {calcs
                 .filter((c) => c.payable > 0)
                 .map((c) => (
                   <li key={c.id} className="flex items-center justify-between gap-3">
                     <span className="truncate">POS {c.pos} · {c.hs}</span>
-                    <span className="tnum font-semibold text-amber-700">{fmtIdr(c.payable)}</span>
+                    <span className="tnum font-semibold text-amber-400">{fmtIdr(c.payable)}</span>
                   </li>
                 ))}
             </ul>
@@ -164,38 +168,39 @@ export function RightPanel({
         )}
       </div>
 
-      <div className="shrink-0 rounded-xl border border-blue-200/80 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 p-2.5 shadow-2xs">
-        <div className="flex items-center gap-2 text-blue-900">
+      {/* AI Tariff Optimization & FTA Advisory */}
+      <div className="shrink-0 rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950/40 to-blue-950/40 p-3 shadow-2xs">
+        <div className="flex items-center gap-2 text-cyan-300">
           <Sparkles size={14} />
-          <span className="text-[12.5px] font-semibold tracking-tight">AI Tariff Optimization & FTA Advisory</span>
+          <span className="text-[12.5px] font-semibold tracking-tight">AI Tariff Optimization &amp; FTA Advisory</span>
         </div>
-        <ul className="mt-1 space-y-0.5 text-[11px] leading-tight text-slate-700">
+        <ul className="mt-2 space-y-1.5 text-[11px] leading-tight text-zinc-300">
           {(() => {
             const origin = calcs[0]?.line.origin || "CN";
             const fta = getFtaRecommendation(origin);
             return (
               <li className="flex items-start gap-2">
-                <ShieldCheck size={13} className="mt-0.5 shrink-0 text-emerald-600" />
+                <ShieldCheck size={13} className="mt-0.5 shrink-0 text-emerald-400" />
                 <span>
-                  <b className="font-semibold text-emerald-700">{fta.schemeName} ({fta.formType}) Opportunity:</b>{" "}
+                  <b className="font-semibold text-emerald-300">{fta.schemeName} ({fta.formType}) Opportunity:</b>{" "}
                   {fta.adviceMessage}
-                  <div className="text-[10px] text-blue-600 font-mono mt-0.5">Legal Basis: {fta.legalBasis}</div>
+                  <div className="text-[10px] text-cyan-400 font-mono mt-0.5">Legal Basis: {fta.legalBasis}</div>
                 </span>
               </li>
             );
           })()}
           <li className="flex items-start gap-2">
-            <ShieldCheck size={13} className="mt-0.5 shrink-0 text-emerald-600" />
+            <ShieldCheck size={13} className="mt-0.5 shrink-0 text-emerald-400" />
             <span>
-              <b className="font-semibold text-emerald-700">Masterlist Balance:</b> Manufacturer has 420 units remaining in
+              <b className="font-semibold text-emerald-300">Masterlist Balance:</b> Manufacturer has 420 units remaining in
               BP Batam Machinery Masterlist quota. Auto-deduction available.
             </span>
           </li>
           <li className="flex items-start gap-2">
-            <ShieldCheck size={13} className="mt-0.5 shrink-0 text-emerald-600" />
+            <ShieldCheck size={13} className="mt-0.5 shrink-0 text-emerald-400" />
             <span>
-              <b className="font-semibold text-emerald-700">Audit Defense:</b>
-              <span className="ml-1.5 inline-block rounded border border-slate-200 bg-white px-2 py-0.5 font-mono text-[11px] text-slate-600">
+              <b className="font-semibold text-emerald-300">Audit Defense:</b>
+              <span className="ml-1.5 inline-block rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 font-mono text-[11px] text-zinc-300">
                 SOP Bea Cukai Batam No. KEP-54/KPU.02/2023
               </span>
             </span>
@@ -204,12 +209,12 @@ export function RightPanel({
       </div>
 
       <div className="flex shrink-0 items-center gap-3 pt-0.5">
-        <Label className="inline-flex items-center gap-2 whitespace-nowrap text-slate-700">
-          <Table2 size={12} />
+        <Label className="inline-flex items-center gap-2 whitespace-nowrap text-zinc-300">
+          <Table2 size={12} className="text-cyan-400" />
           Interactive Customs Declaration
         </Label>
-        <div className="h-px flex-1 bg-slate-200" />
-        <span className="hidden items-center gap-1.5 whitespace-nowrap text-[11.5px] text-slate-500 lg:flex">
+        <div className="h-px flex-1 bg-zinc-800" />
+        <span className="hidden items-center gap-1.5 whitespace-nowrap text-[11.5px] text-zinc-400 lg:flex">
           <ListChecks size={12} />
           click a row to locate it in the document
         </span>

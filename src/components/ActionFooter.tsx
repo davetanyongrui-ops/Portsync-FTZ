@@ -17,36 +17,36 @@ export function ActionFooter({
   const filed = ready && totals.selected > 0;
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
+    <div className="flex shrink-0 flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-zinc-800 bg-zinc-900/90 px-5 py-3 backdrop-blur shadow-lg">
       <div className="leading-tight">
-        <div className="text-[11px] font-medium tracking-wider text-slate-500 uppercase">Lines filed</div>
-        <div className="tnum mt-1 text-[13px] font-semibold text-slate-900">
+        <div className="text-[11px] font-medium tracking-wider text-zinc-400 uppercase">Lines filed</div>
+        <div className="tnum mt-1 text-[13px] font-semibold text-zinc-100">
           {ready ? `${totals.selected}/${totals.lines}` : "—"}
         </div>
       </div>
       <div className="leading-tight">
-        <div className="text-[11px] font-medium tracking-wider text-slate-500 uppercase">Payable</div>
+        <div className="text-[11px] font-medium tracking-wider text-zinc-400 uppercase">Payable</div>
         <div
           className={
             filed
               ? totals.payable === 0
-                ? "tnum mt-1 text-[13px] font-semibold text-emerald-700"
-                : "tnum mt-1 text-[13px] font-semibold text-amber-700"
-              : "tnum mt-1 text-[13px] font-semibold text-slate-900"
+                ? "tnum mt-1 text-[13px] font-semibold text-emerald-400"
+                : "tnum mt-1 text-[13px] font-semibold text-amber-400"
+              : "tnum mt-1 text-[13px] font-semibold text-zinc-100"
           }
         >
           {filed ? fmtIdr(totals.payable) : "—"}
         </div>
       </div>
       <div className="leading-tight">
-        <div className="text-[11px] font-medium tracking-wider text-slate-500 uppercase">FTZ saving</div>
-        <div className="tnum mt-1 text-[13px] font-semibold text-emerald-700">
+        <div className="text-[11px] font-medium tracking-wider text-zinc-400 uppercase">FTZ saving</div>
+        <div className="tnum mt-1 text-[13px] font-semibold text-emerald-400">
           {filed ? fmtIdrShort(totals.saved) : "—"}
         </div>
       </div>
       <div className="hidden sm:block leading-tight">
-        <div className="text-[11px] font-medium tracking-wider text-slate-500 uppercase">Avg match</div>
-        <div className="tnum mt-1 text-[13px] font-semibold text-slate-900">
+        <div className="text-[11px] font-medium tracking-wider text-zinc-400 uppercase">Avg match</div>
+        <div className="tnum mt-1 text-[13px] font-semibold text-cyan-300">
           {filed ? `${Math.round(totals.avgConfidence * 100)}%` : "—"}
         </div>
       </div>

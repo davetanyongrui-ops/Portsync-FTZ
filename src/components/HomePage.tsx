@@ -3,7 +3,6 @@ import { CheckCircle2, FileSearch, LayoutDashboard, ShieldCheck, Sparkles, Zap }
 export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
   return (
     <div className="scroll-thin flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-b from-slate-50 via-white to-slate-50">
-      {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(37,99,235,0.08),_transparent_60%)]" />
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center px-6 py-20 text-center">
@@ -34,7 +33,6 @@ export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
             </button>
           </div>
 
-          {/* Product mockup */}
           <div className="mt-14 w-full max-w-5xl">
             <div className="relative rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_30px_80px_-30px_rgba(37,99,235,0.25)]">
               <div className="flex items-center gap-1.5 px-3 py-2">
@@ -73,7 +71,6 @@ export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
         </div>
       </section>
 
-      {/* Feature grid */}
       <section className="mx-auto w-full max-w-6xl px-6 py-16">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Built for customs brokers</h2>

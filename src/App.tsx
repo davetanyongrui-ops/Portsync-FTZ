@@ -1,24 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Zap } from "lucide-react";
+import { Home, LayoutDashboard, FileSearch as FileSearchIcon } from "lucide-react";
 import { TopBar } from "./components/TopBar";
 import { LeftPanel, PIPELINE, type AnalyzeState } from "./components/LeftPanel";
 import type { UploadedFile } from "./components/UploadZone";
 import { RightPanel } from "./components/RightPanel";
 import { PayloadModal, type ModalPayload } from "./components/PayloadModal";
 import { ToastStack, type Toast } from "./components/Toasts";
+import { HomePage } from "./components/HomePage";
+import { FeaturesPage } from "./components/FeaturesPage";
+import { PricingPage } from "./components/PricingPage";
+import { ContactPage } from "./components/ContactPage";
+import { LoginPage } from "./components/LoginPage";
+import { SignupPage } from "./components/SignupPage";
 import { DEMO_INVOICES, getInvoice } from "./data/fixtures";
-import { PPN_RATE, PPH22_RATE, FX } from "./data/constants";
+import { PPN_RATE, PPH22_RATE } from "./data/constants";
 import { buildDeclaration, computeLine } from "./lib/engine";
 import { buildCeisaXml, buildPpftzPayload, idempotencyKey, validationReport } from "./lib/payload";
 import { downloadText } from "./lib/download";
 import { fmtIdr, fmtUsd } from "./lib/format";
 import { cn } from "./lib/cn";
-import type { Overrides } from "./lib/engine";
+import { getSession, logOut, type AuthUser } from "./lib/auth";
+import { FX, refreshFx, subscribeFx } from "./lib/fx";
+import type { Overrides, Regime } from "./lib/engine";
 
 const FILE_BASE = (docNo: string) => docNo.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
 const selectAllOf = (ids: string[]) => Object.fromEntries(ids.map((id) => [id, true]));
 
-/** Filename keyword -> fixture whose grammar the agent replays for an uploaded document. */
 const KEYWORD_FIXTURE: Record<string, string> = {
   greentech: "gt",
   shenzhen: "gt",
@@ -38,7 +45,31 @@ const KEYWORD_FIXTURE: Record<string, string> = {
   electronics: "smp",
 };
 
+export type Page = "home" | "features" | "pricing" | "contact" | "dashboard" | "inspector";
+
+const PUBLIC_PAGES: { key: Page; label: string }[] = [
+  { key: "home", label: "Home" },
+  { key: "features", label: "Features" },
+  { key: "pricing", label: "Pricing" },
+  { key: "contact", label: "Contact" },
+];
+
+const APP_PAGES: { key: Page; label: string; icon: typeof Home }[] = [
+  { key: "inspector", label: "Document & Source Inspector", icon: FileSearchIcon },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+];
+
+function pageFromHash(): Page {
+  const h = window.location.hash.replace(/^#\/?/, "");
+  const valid: Page[] = ["home", "features", "pricing", "contact", "dashboard", "inspector"];
+  if (valid.includes(h as Page)) return h as Page;
+  return "inspector";
+}
+
 export default function App() {
+  const [authView, setAuthView] = useState<"login" | "signup">("login");
+  const [user, setUser] = useState<AuthUser | null>(() => getSession());
+  const [page, setPage] = useState<Page>(pageFromHash);
   const [invoiceId, setInvoiceId] = useState(DEMO_INVOICES[0]!.id);
   const [uploaded, setUploaded] = useState<UploadedFile | null>(null);
   const [status, setStatus] = useState<AnalyzeState>("staged");
@@ -48,9 +79,10 @@ export default function App() {
     selectAllOf(DEMO_INVOICES[0]!.lines.map((l) => l.id)),
   );
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [mobileView, setMobileView] = useState<"source" | "declaration">("source");
   const [modal, setModal] = useState<ModalPayload | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [regime, setRegime] = useState<Regime>("PPFTZ-01");
+  const [fxTick, setFxTick] = useState(0);
 
   const timers = useRef<number[]>([]);
   const toastSeq = useRef(0);
@@ -63,8 +95,8 @@ export default function App() {
   );
 
   const { calcs, totals } = useMemo(
-    () => buildDeclaration(invoice, overrides, selectedSet),
-    [invoice, overrides, selectedSet],
+    () => buildDeclaration(invoice, overrides, selectedSet, regime),
+    [invoice, overrides, selectedSet, regime, fxTick],
   );
 
   const rows = useMemo(() => calcs.map((c) => ({ ...c, selected: selectedSet.has(c.id) })), [calcs, selectedSet]);
@@ -86,6 +118,23 @@ export default function App() {
 
   useEffect(() => clearTimers, [clearTimers]);
 
+  useEffect(() => {
+    const handler = () => setPage(pageFromHash());
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeFx(() => setFxTick((n) => n + 1));
+    refreshFx();
+    return () => unsub();
+  }, []);
+
+  const navigate = useCallback((p: Page) => {
+    window.location.hash = p === "home" ? "#/" : `#/${p}`;
+    setPage(p);
+  }, []);
+
   const pickInvoice = useCallback(
     (id: string) => {
       clearTimers();
@@ -96,6 +145,7 @@ export default function App() {
       setActiveId(null);
       setStage(0);
       setStatus("staged");
+      setRegime("PPFTZ-01");
     },
     [clearTimers],
   );
@@ -150,28 +200,30 @@ export default function App() {
       if (!line) return;
       setOverrides((prev) => ({ ...prev, [id]: hs }));
       if (hs === line.hs) return;
-      const before = computeLine(line);
-      const after = computeLine(line, hs);
+      const before = computeLine(line, undefined, regime);
+      const after = computeLine(line, hs, regime);
       pushToast({
         tone: "warn",
         title: `POS ${line.pos} re-mapped to ${hs}`,
         detail: `Standard duty ${fmtIdr(before.standard.total)} → ${fmtIdr(after.standard.total)}; payable after facility ${fmtIdr(after.payable)}.`,
       });
     },
-    [invoice, pushToast],
+    [invoice, pushToast, regime],
   );
 
   const handleUpload = useCallback(
     (f: UploadedFile) => {
       setUploaded(f);
-      const name = f.name.toLowerCase();
-      const hit = Object.keys(KEYWORD_FIXTURE).find((k) => name.includes(k));
+      const text = `${f.name} ${f.extractedText || ""}`.toLowerCase();
+      const hit = Object.keys(KEYWORD_FIXTURE).find((k) => text.includes(k));
       const target = hit ? KEYWORD_FIXTURE[hit]! : invoiceId;
       if (target !== invoiceId) pickInvoice(target);
       pushToast({
         tone: "brand",
         title: `${f.name} staged locally`,
-        detail: `Parsed against the ${getInvoice(target).label.split(" — ")[0]} fixture grammar — this build ships no OCR backend.`,
+        detail: f.extractedText
+          ? `Extracted ${f.extractedText.length} chars from PDF and matched to ${getInvoice(target).label.split(" — ")[0]}.`
+          : `Parsed against the ${getInvoice(target).label.split(" — ")[0]} fixture grammar — this build ships no OCR backend.`,
       });
     },
     [invoiceId, pickInvoice, pushToast],
@@ -245,68 +297,100 @@ export default function App() {
           }
         : { text: "Agent idle · awaiting analysis", tone: "idle" as const };
 
-  const tabs = [
-    { key: "source" as const, label: "Invoice & Source", icon: FileText },
-    { key: "declaration" as const, label: "Customs Declaration", icon: Zap },
-  ];
+  const isProtected = page === "dashboard" || page === "inspector";
+
+  if (!user && isProtected) {
+    return authView === "login" ? (
+      <LoginPage onLoggedIn={() => setUser(getSession())} onSwitchToSignup={() => setAuthView("signup")} />
+    ) : (
+      <SignupPage onSignedUp={() => setUser(getSession())} onSwitchToLogin={() => setAuthView("login")} />
+    );
+  }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 antialiased">
       <TopBar agent={agent} />
 
-      <nav className="flex shrink-0 items-center gap-1 border-b border-zinc-800/80 bg-zinc-900/40 p-2 lg:hidden">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            data-tab={t.key}
-            onClick={() => setMobileView(t.key)}
-            aria-pressed={mobileView === t.key}
-            className={cn(
-              "flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[12.5px] font-medium transition-colors",
-              mobileView === t.key ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300",
-            )}
-          >
-            <t.icon size={14} />
-            {t.label}
-            {t.key === "declaration" && ready && (
-              <span className="ml-1 size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-            )}
-          </button>
-        ))}
+      <nav className="flex shrink-0 flex-wrap items-center border-b border-slate-200 bg-white px-4 py-2 lg:px-6">
+        <div className="hidden flex-1 sm:block" />
+        <div className="flex flex-wrap items-center justify-center gap-1">
+          {PUBLIC_PAGES.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => navigate(p.key)}
+              aria-current={page === p.key ? "page" : undefined}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+                page === p.key
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+          {user &&
+            APP_PAGES.map((p) => {
+              const Icon = p.icon;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => navigate(p.key)}
+                  aria-current={page === p.key ? "page" : undefined}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+                    page === p.key
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                  )}
+                >
+                  <Icon size={14} />
+                  <span className="hidden sm:inline">{p.label}</span>
+                </button>
+              );
+            })}
+        </div>
+        <div className="flex flex-1 items-center justify-end gap-2">
+          {user ? (
+            <>
+              <span className="hidden text-[12px] font-medium text-slate-700 sm:inline">{user.name}</span>
+              <button
+                type="button"
+                onClick={() => { logOut(); setUser(null); setPage("home"); }}
+                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => { setAuthView("login"); navigate("home"); }}
+                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+              >
+                Log in
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthView("signup"); navigate("home"); }}
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+              >
+                Sign up
+              </button>
+            </>
+          )}
+        </div>
       </nav>
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        <div
-          className={cn(
-            "min-h-0 flex-1 lg:w-[38%] lg:flex-none lg:border-r lg:border-zinc-800/80 lg:bg-zinc-900/40",
-            mobileView === "source" ? "flex" : "hidden lg:flex",
-          )}
-        >
-          <LeftPanel
-            invoice={invoice}
-            invoiceId={invoiceId}
-            onPick={pickInvoice}
-            uploaded={uploaded}
-            onUpload={handleUpload}
-            onClearUpload={() => setUploaded(null)}
-            onReject={handleReject}
-            status={status}
-            stage={stage}
-            calcs={calcs}
-            activeId={activeId}
-            onActive={setActiveId}
-            onAnalyze={analyze}
-            onReset={resetOverrides}
-          />
-        </div>
-
-        <div
-          className={cn(
-            "min-h-0 flex-1 lg:w-[62%] lg:flex-none",
-            mobileView === "declaration" ? "flex" : "hidden lg:flex",
-          )}
-        >
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {page === "home" && <HomePage onNavigate={navigate} />}
+        {page === "features" && <FeaturesPage onNavigate={navigate} />}
+        {page === "pricing" && <PricingPage onNavigate={navigate} />}
+        {page === "contact" && <ContactPage onNavigate={navigate} />}
+        {page === "dashboard" && (
           <RightPanel
             invoice={invoice}
             calcs={calcs}
@@ -320,11 +404,29 @@ export default function App() {
             onOverride={overrideLine}
             onDownloadXml={downloadXml}
             onOpenPayload={openPayload}
+            regime={regime}
+            onRegimeChange={setRegime}
           />
-        </div>
+        )}
+        {page === "inspector" && (
+          <LeftPanel
+            invoice={invoice}
+            uploaded={uploaded}
+            onUpload={handleUpload}
+            onClearUpload={() => setUploaded(null)}
+            onReject={handleReject}
+            status={status}
+            stage={stage}
+            calcs={calcs}
+            activeId={activeId}
+            onActive={setActiveId}
+            onAnalyze={analyze}
+            onReset={resetOverrides}
+          />
+        )}
       </main>
 
-      <footer className="flex h-8 shrink-0 items-center gap-5 border-t border-zinc-800/80 bg-zinc-950 px-5 text-[11px] text-zinc-500">
+      <footer className="flex h-8 shrink-0 items-center gap-5 border-t border-slate-200 bg-white px-5 text-[11px] text-slate-500">
         <span className="truncate">
           PortSync FTZ Agent · reference BTKI 2026 edition ·{" "}
           {ready ? `${calcs.length} classified lines` : "awaiting analysis"}
@@ -336,7 +438,7 @@ export default function App() {
         <span className="ml-auto tnum shrink-0">
           Invoice total {fmtUsd(totals.usdCif)} · filing set {ready ? `${totals.selected}/${totals.lines}` : "—"}
         </span>
-        <span className="shrink-0 text-emerald-400">sandbox · no live dispatch</span>
+        <span className="shrink-0 text-emerald-700">sandbox · no live dispatch</span>
       </footer>
 
       {modal && <PayloadModal payload={modal} onClose={() => setModal(null)} onCopied={onCopied} />}

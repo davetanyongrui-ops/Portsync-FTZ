@@ -66,32 +66,30 @@ export function LeftPanel({
       <div className="shrink-0 space-y-4">
         <UploadZone file={uploaded} onFile={onUpload} onClear={onClearUpload} onReject={onReject} />
 
-        <div>
-          <div className="rounded-lg border border-slate-200 bg-white p-3.5 shadow-2xs">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-[13px] font-semibold text-slate-900">{invoice.supplier.name}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-slate-500">
-                  {invoice.consignee.name}
-                  <ArrowRight size={11} className="text-slate-400" />
-                  <span className="text-slate-400">KPBPB Batam</span>
-                </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3.5 shadow-2xs">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-semibold text-slate-900">{invoice.supplier.name}</div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-slate-500">
+                {invoice.consignee.name}
+                <ArrowRight size={11} className="text-slate-400" />
+                <span className="text-slate-400">KPBPB Batam</span>
               </div>
-              <Pill tone="brand" className="shrink-0">
-                {invoice.currency}
-              </Pill>
             </div>
-            <div className="tnum mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-200/70 pt-2.5 text-[11.5px] text-slate-500">
-              <span>{invoice.docNo}</span>
-              <span className="text-slate-300">·</span>
-              <span>{fmtDate(invoice.docDate)}</span>
-              <span className="text-slate-300">·</span>
-              <span>ETA {fmtDate(invoice.freight.eta)}</span>
-              <span className="text-slate-300">·</span>
-              <span>{invoice.lines.length} line items</span>
-            </div>
-            <p className="mt-2.5 text-[12px] leading-relaxed text-slate-500 italic">{invoice.headline}</p>
+            <Pill tone="brand" className="shrink-0">
+              {invoice.currency}
+            </Pill>
           </div>
+          <div className="tnum mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-200/70 pt-2.5 text-[11.5px] text-slate-500">
+            <span>{invoice.docNo}</span>
+            <span className="text-slate-300">·</span>
+            <span>{fmtDate(invoice.docDate)}</span>
+            <span className="text-slate-300">·</span>
+            <span>ETA {fmtDate(invoice.freight.eta)}</span>
+            <span className="text-slate-300">·</span>
+            <span>{invoice.lines.length} line items</span>
+          </div>
+          <p className="mt-2.5 text-[12px] leading-relaxed text-slate-500 italic">{invoice.headline}</p>
         </div>
 
         {uploaded && (
@@ -99,9 +97,7 @@ export function LeftPanel({
             <TriangleAlert size={14} className="mt-px shrink-0 text-amber-500" />
             <span>
               <b className="font-semibold text-amber-900">{uploaded.name}</b> is staged locally. This build ships no OCR
-              backend, so the agent parses it against the{" "}
-              <b className="font-semibold text-amber-900">{invoice.label.split(" — ")[0]}</b> fixture grammar and reports
-              those values.
+              backend, so the agent parses it against the fixture grammar and reports those values.
             </span>
           </div>
         )}
@@ -139,7 +135,6 @@ export function LeftPanel({
         invoice={invoice}
         calcs={calcs}
         analyzed={analyzed}
-        analyzing={status === "analyzing"}
         activeId={activeId}
         onActive={onActive}
       />

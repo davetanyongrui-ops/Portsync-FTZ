@@ -2,7 +2,6 @@ import { useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import { CloudUpload, FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
 import { cn } from "../lib/cn";
 import { Label } from "./ui";
-
 import { extractPdfText } from "../lib/pdf";
 
 export interface UploadedFile {
@@ -97,14 +96,14 @@ export function UploadZone({
           {...dropProps}
           className={cn(
             "flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-dashed px-3 transition-colors",
-            dragging ? "border-emerald-500/70 bg-emerald-50" : "border-slate-300 bg-white hover:border-slate-400",
+            dragging ? "border-emerald-500/70 bg-emerald-500/10" : "border-zinc-700 bg-zinc-900/60 hover:border-zinc-500",
           )}
         >
-          <span className="grid size-6 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-100 text-blue-600">
+          <span className="grid size-6 shrink-0 place-items-center rounded-md border border-zinc-700 bg-zinc-800 text-cyan-400">
             {isPdf ? <FileText size={12} /> : <ImageIcon size={12} />}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-slate-800">{file.name}</span>
-          <span className="tnum hidden shrink-0 text-[11px] text-slate-500 sm:inline">
+          <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-zinc-200">{file.name}</span>
+          <span className="tnum hidden shrink-0 text-[11px] text-zinc-400 sm:inline">
             {file.sizeKb.toLocaleString("en-US")} kB · staged locally
           </span>
           <button
@@ -113,7 +112,7 @@ export function UploadZone({
               e.stopPropagation();
               onClear();
             }}
-            className="grid size-6 shrink-0 place-items-center rounded-md border border-slate-200 text-slate-500 transition-colors hover:border-rose-400 hover:text-rose-600"
+            className="grid size-6 shrink-0 place-items-center rounded-md border border-zinc-700 text-zinc-400 transition-colors hover:border-rose-400 hover:text-rose-400"
             aria-label="Remove document"
           >
             <X size={12} />
@@ -130,21 +129,21 @@ export function UploadZone({
       <div
         {...dropProps}
         className={cn(
-          "group flex items-center gap-3 rounded-xl border border-dashed px-3.5 py-3 text-left transition-colors",
+          "group flex items-center gap-3 rounded-xl border border-dashed px-3.5 py-3 text-left transition-colors cursor-pointer",
           dragging
-            ? "border-emerald-500/70 bg-emerald-50"
-            : "border-2 border-dashed border-slate-300 bg-white hover:border-blue-400 hover:bg-blue-50/30",
+            ? "border-emerald-500/70 bg-emerald-500/10"
+            : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900/80",
         )}
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-100 text-slate-500 transition-colors group-hover:text-blue-600">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 transition-colors group-hover:border-cyan-500/40 group-hover:text-cyan-400">
           <CloudUpload size={17} />
         </span>
         <span className="min-w-0">
-          <span className="block text-[12.5px] font-medium text-slate-800">
+          <span className="block text-[12.5px] font-medium text-zinc-200">
             {dragging ? "Release to stage the document" : "Drop invoice or shipping manifest"}
           </span>
-          <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">
-            <Paperclip size={11} className="text-slate-400" />
+          <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-400">
+            <Paperclip size={11} className="text-zinc-500" />
             PDF, PNG, JPG up to 25 MB — or pick a fixture below
           </span>
         </span>
