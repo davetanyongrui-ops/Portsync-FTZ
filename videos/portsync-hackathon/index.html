@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>PortSync FTZ — Autonomous Customs Intelligence Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #060911;
+        color: #f8fafc;
+        font-family: Inter, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 15%, #0f172a 0%, #060911 75%);
+      }
+
+      /* Global Ambient Grid & Lighting */
+      .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image: 
+          linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: radial-gradient(circle at 50% 40%, black 40%, transparent 85%);
+        pointer-events: none;
+      }
+      .ambient-glow-1 {
+        position: absolute;
+        top: -150px;
+        left: 20%;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .ambient-glow-2 {
+        position: absolute;
+        top: 250px;
+        right: 15%;
+        width: 700px;
+        height: 700px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+        pointer-events: none;
+      }
+
+      /* Top Persistent Brand Bar */
+      #topbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 84px;
+        padding: 0 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(6, 9, 17, 0.75);
+        backdrop-filter: blur(16px);
+        z-index: 50;
+      }
+      .logo-group {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .logo-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        display: grid;
+        place-items: center;
+        color: #10b981;
+      }
+      .logo-text {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+      }
+      .logo-sub {
+        font-size: 13px;
+        font-weight: 500;
+        color: #94a3b8;
+        letter-spacing: 0.02em;
+      }
+      .top-meta {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .meta-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 13px;
+        font-weight: 600;
+        color: #cbd5e1;
+        letter-spacing: 0.02em;
+      }
+      .blip {
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background: #10b981;
+        box-shadow: 0 0 10px #10b981;
+      }
+      .blip-amber {
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background: #f59e0b;
+        box-shadow: 0 0 10px #f59e0b;
+      }
+
+      /* Bottom Progress Bar */
+      #footer-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        padding: 0 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(6, 9, 17, 0.85);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        z-index: 50;
+      }
+      .footer-track {
+        flex: 1;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 9999px;
+        margin: 0 32px;
+        overflow: hidden;
+      }
+      #progress-fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #3b82f6);
+        border-radius: 9999px;
+      }
+      .footer-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #94a3b8;
+        font-family: "JetBrains Mono", monospace;
+      }
+
+      /* Clips & Canvas */
+      .clip {
+        position: absolute;
+        top: 84px;
+        left: 0;
+        right: 0;
+        bottom: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 80px;
+      }
+      .scene-inner {
+        width: 100%;
+        max-width: 1560px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      /* Badges & Headlines */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 18px;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 24px;
+      }
+      .badge-emerald {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        color: #34d399;
+      }
+      .badge-rose {
+        background: rgba(244, 63, 94, 0.15);
+        border: 1px solid rgba(244, 63, 94, 0.4);
+        color: #fb7185;
+      }
+      .badge-cyan {
+        background: rgba(6, 182, 212, 0.15);
+        border: 1px solid rgba(6, 182, 212, 0.4);
+        color: #38bdf8;
+      }
+      .badge-purple {
+        background: rgba(168, 85, 247, 0.15);
+        border: 1px solid rgba(168, 85, 247, 0.4);
+        color: #c084fc;
+      }
+
+      .h-hero {
+        font-size: 64px;
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        color: #ffffff;
+        margin-bottom: 20px;
+      }
+      .h-gradient {
+        background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .h-emerald {
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .h-rose {
+        background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .subtitle {
+        font-size: 24px;
+        font-weight: 400;
+        line-height: 1.45;
+        color: #94a3b8;
+        max-width: 1080px;
+        margin-bottom: 44px;
+      }
+
+      /* Card Grids */
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
+        width: 100%;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px;
+        width: 100%;
+      }
+      .card {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 36px 32px;
+        text-align: left;
+        backdrop-filter: blur(12px);
+        position: relative;
+        overflow: hidden;
+      }
+      .card-accent-emerald {
+        border-top: 3px solid #10b981;
+      }
+      .card-accent-rose {
+        border-top: 3px solid #f43f5e;
+      }
+      .card-accent-cyan {
+        border-top: 3px solid #06b6d4;
+      }
+      .card-accent-amber {
+        border-top: 3px solid #f59e0b;
+      }
+
+      .card-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+      .icon-rose {
+        background: rgba(244, 63, 94, 0.15);
+        border: 1px solid rgba(244, 63, 94, 0.3);
+      }
+      .icon-emerald {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+      }
+      .icon-cyan {
+        background: rgba(6, 182, 212, 0.15);
+        border: 1px solid rgba(6, 182, 212, 0.3);
+      }
+      .icon-amber {
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+      }
+
+      .card-num {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        margin-bottom: 12px;
+        color: #ffffff;
+      }
+      .card-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin-bottom: 10px;
+      }
+      .card-desc {
+        font-size: 15px;
+        font-weight: 400;
+        line-height: 1.55;
+        color: #94a3b8;
+      }
+
+      /* Flow Pipeline Nodes */
+      .pipeline-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 20px;
+      }
+      .pipeline-node {
+        flex: 1;
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 18px;
+        padding: 30px 24px;
+        text-align: left;
+        position: relative;
+      }
+      .node-step {
+        display: inline-block;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        font-weight: 700;
+        color: #38bdf8;
+        background: rgba(6, 182, 212, 0.15);
+        padding: 3px 10px;
+        border-radius: 6px;
+        margin-bottom: 14px;
+        letter-spacing: 0.05em;
+      }
+      .node-arrow {
+        color: #94a3b8;
+        font-size: 28px;
+        font-weight: 400;
+      }
+
+      /* Code / Payload Preview */
+      .code-box {
+        width: 100%;
+        background: #020617;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 24px 28px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 14.5px;
+        line-height: 1.6;
+        color: #e2e8f0;
+        text-align: left;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      }
+      .token-tag { color: #38bdf8; }
+      .token-attr { color: #a5b4fc; }
+      .token-val { color: #34d399; }
+      .token-com { color: #64748b; }
+      .token-num { color: #f59e0b; }
+
+      /* Impact Stats Big */
+      .stat-highlight {
+        font-size: 68px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        line-height: 1;
+        background: linear-gradient(135deg, #10b981 0%, #38bdf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-width="1920"
+      data-height="1080"
+      data-duration="45.5"
+    >
+      <!-- Persistent Audio Track -->
+      <audio id="voiceover" src="assets/voiceover.wav" data-start="0" data-duration="45.4" data-volume="1"></audio>
+
+      <div class="grid-bg"></div>
+      <div class="ambient-glow-1"></div>
+      <div class="ambient-glow-2"></div>
+
+      <!-- Persistent Header -->
+      <header id="topbar">
+        <div class="logo-group">
+          <div class="logo-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="3"/>
+              <line x1="12" y1="22" x2="12" y2="8"/>
+              <path d="M5 12H2a10 10 0 0 0 20 0h-3"/>
+            </svg>
+          </div>
+          <div>
+            <div class="logo-text">PortSync FTZ</div>
+            <div class="logo-sub">Autonomous Customs Intelligence Agent · Batam Free Trade Zone</div>
+          </div>
+        </div>
+        <div class="top-meta">
+          <div class="meta-pill">
+            <span class="blip"></span>
+            <span>BATAM KPBPB · PP 41/2021</span>
+          </div>
+          <div class="meta-pill">
+            <span class="blip-amber"></span>
+            <span>CEISA 4.0 / INSW GATEWAY</span>
+          </div>
+          <div id="scene-counter" class="meta-pill" style="font-family: 'JetBrains Mono', monospace; color: #38bdf8;">
+            01 / 06
+          </div>
+        </div>
+      </header>
+
+      <!-- Persistent Footer Progress -->
+      <footer id="footer-bar">
+        <span class="footer-label">PORTSYNC FTZ · HACKATHON 2026</span>
+        <div class="footer-track">
+          <div id="progress-fill"></div>
+        </div>
+        <span class="footer-label">AUTONOMOUS TARIFF CLEARANCE</span>
+      </footer>
+
+      <!-- SCENE 1: HOOK & THE BATAM TRADE ENVIRONMENT (0s - 7.5s) -->
+      <section id="scene-1" class="clip" data-start="0" data-duration="7.5">
+        <div class="scene-inner" id="s1-content">
+          <div class="badge badge-emerald">Batam KPBPB Free Trade Zone</div>
+          <h1 class="h-hero">
+            Billions in International Trade.<br />
+            <span class="h-gradient">Paralyzed by Manual Tariff Compliance.</span>
+          </h1>
+          <p class="subtitle">
+            Batam processes thousands of foreign shipments monthly. Yet compliance clerks spend hours manually checking multi-page invoices against Indonesia's 11,000+ BTKI tariff codes.
+          </p>
+          <div class="grid-3">
+            <div class="card card-accent-emerald s1-card">
+              <div class="card-num">$ 3.5B+</div>
+              <div class="card-title">Annual Foreign Trade</div>
+              <div class="card-desc">Massive influx of electronics, precision machinery, solar cells, and raw materials into Batam's bonded industrial enclaves.</div>
+            </div>
+            <div class="card card-accent-cyan s1-card">
+              <div class="card-num">Pelabuhan Batu Ampar</div>
+              <div class="card-title">Primary Maritime Gateway</div>
+              <div class="card-desc">Batam's busiest international terminal linking global suppliers from Singapore, China, and ASEAN directly to local factories.</div>
+            </div>
+            <div class="card card-accent-amber s1-card">
+              <div class="card-num">11,400+ Codes</div>
+              <div class="card-title">BTKI 2026 Classification</div>
+              <div class="card-desc">Dense regulatory schedules, bilateral trade rules (ACFTA, ATIGA), and strict surveyor restrictions that require error-free filing.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 2: THE PROBLEM (7.5s - 15.5s) -->
+      <section id="scene-2" class="clip" data-start="7.5" data-duration="8">
+        <div class="scene-inner" id="s2-content">
+          <div class="badge badge-rose">Critical Compliance Bottlenecks</div>
+          <h1 class="h-hero">
+            One Minor Discrepancy.<br />
+            <span class="h-rose">Triggers Jalur Merah &amp; Port Detention.</span>
+          </h1>
+          <p class="subtitle">
+            Administrative mismatches across Invoices, Bills of Lading, and Packing Lists cause costly delays and devastating financial penalties.
+          </p>
+          <div class="grid-3">
+            <div class="card card-accent-rose s2-card">
+              <div class="card-icon icon-rose">⏱️</div>
+              <div class="card-title">3–5 Hours Per Shipment</div>
+              <div class="card-desc">Freight forwarders (PPJK) spend hours manually cross-checking line items, unit prices, net weights, and surveyor requirements line-by-line.</div>
+            </div>
+            <div class="card card-accent-rose s2-card">
+              <div class="card-icon icon-rose">🛑</div>
+              <div class="card-title">Jalur Merah (Red Line Audits)</div>
+              <div class="card-desc">Document discrepancies halt containers at Pelabuhan Batu Ampar, causing physical inspection holds and mounting demurrage storage fees.</div>
+            </div>
+            <div class="card card-accent-rose s2-card">
+              <div class="card-icon icon-rose">💸</div>
+              <div class="card-title">Up to 500% Customs Penalties</div>
+              <div class="card-desc">Severe customs fines (Denda Kepabeanan) and high tax liability risks when goods transfer between Batam (PPFTZ-01) and mainland Indonesia.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 3: THE SOLUTION - PORTSYNC FTZ (15.5s - 24.5s) -->
+      <section id="scene-3" class="clip" data-start="15.5" data-duration="9">
+        <div class="scene-inner" id="s3-content">
+          <div class="badge badge-cyan">The Autonomous Customs Agent</div>
+          <h1 class="h-hero">
+            PortSync FTZ: Raw Invoices to<br />
+            <span class="h-emerald">Validated Declarations in Under 15 Seconds</span>
+          </h1>
+          <p class="subtitle">
+            Combines zero-latency multimodal document ingestion with a specialized Indonesian customs intelligence engine for instant Batam KPBPB clearance.
+          </p>
+          <div class="pipeline-row">
+            <div class="pipeline-node s3-node">
+              <span class="node-step">STAGE 01</span>
+              <div class="card-title">Multimodal Ingestion</div>
+              <div class="card-desc">Drop raw PDFs or manifests. Vision agent digitizes part numbers, quantities, declared values, weights, and origins locally.</div>
+            </div>
+            <div class="node-arrow s3-arrow">➔</div>
+            <div class="pipeline-node s3-node">
+              <span class="node-step">STAGE 02</span>
+              <div class="card-title">Semantic BTKI Engine</div>
+              <div class="card-desc">Maps raw descriptions to official 8-digit BTKI tariff codes in &lt; 800ms with transparent confidence scoring and user override.</div>
+            </div>
+            <div class="node-arrow s3-arrow">➔</div>
+            <div class="pipeline-node s3-node">
+              <span class="node-step">STAGE 03</span>
+              <div class="card-title">PP 41/2021 Exemption</div>
+              <div class="card-desc">Computes 100% Bea Masuk Dibebaskan &amp; PPN Tidak Dipungut under the statutory Ministry of Finance (KMK) customs currency rate.</div>
+            </div>
+          </div>
+          <div style="margin-top: 36px;" class="s3-kpi">
+            <div class="meta-pill" style="font-size: 17px; padding: 12px 28px; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.4); color: #34d399;">
+              ⚡ TOTAL CIF: $ 46,022.00 &nbsp;·&nbsp; FTZ SAVINGS: −Rp 134.194.070 (100% EXEMPT) &nbsp;·&nbsp; FINAL DUTY: Rp 0
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 4: DUAL REGIME & LARTAS DEFENSE (24.5s - 32.5s) -->
+      <section id="scene-4" class="clip" data-start="24.5" data-duration="8">
+        <div class="scene-inner" id="s4-content">
+          <div class="badge badge-purple">Regulatory Intelligence</div>
+          <h1 class="h-hero">
+            Dual Regime Architecture &amp;<br />
+            <span class="h-gradient">Proactive Lartas Risk Screening</span>
+          </h1>
+          <p class="subtitle">
+            Seamlessly manages in-zone duty exemption while isolating mainland domestic transfers and blocking non-compliant imports before submission.
+          </p>
+          <div class="grid-2">
+            <div class="card card-accent-cyan s4-card">
+              <div class="card-icon icon-cyan">🔄</div>
+              <div class="card-title">Dual Regime Engine: PPFTZ-01 vs PPFTZ-03</div>
+              <div class="card-desc" style="font-size: 16px; margin-bottom: 14px;">
+                Toggle dynamically between overseas import into Batam FTZ (100% duty-free suspension) and domestic release to Mainland Indonesia (TLDDP) with instant recalculation of Bea Masuk, 11% PPN, and PPh 22.
+              </div>
+              <div class="meta-pill" style="display: inline-flex; font-size: 12px;">PP No. 41/2021 jo. PMK 111/PMK.04/2019</div>
+            </div>
+            <div class="card card-accent-amber s4-card">
+              <div class="card-icon icon-amber">🛡️</div>
+              <div class="card-title">Proactive Lartas &amp; Anti-Dumping (BMAD)</div>
+              <div class="card-desc" style="font-size: 16px; margin-bottom: 14px;">
+                Screens line items against Pre-Border and Post-Border Surveyor Reports (LS), SNI certifications, and bilateral trade preferences (ACFTA Form E, ATIGA Form D) before CEISA dispatch.
+              </div>
+              <div class="meta-pill" style="display: inline-flex; font-size: 12px;">Zero Audit Holds at Batu Ampar</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 5: 1-CLICK CEISA 4.0 EXPORT (32.5s - 39.5s) -->
+      <section id="scene-5" class="clip" data-start="32.5" data-duration="7">
+        <div class="scene-inner" id="s5-content">
+          <div class="badge badge-emerald">CEISA 4.0 Integration</div>
+          <h1 class="h-hero">
+            1-Click Handshake with<br />
+            <span class="h-emerald">DJBC INSW / CEISA 4.0 Gateway</span>
+          </h1>
+          <p class="subtitle">
+            Generates fully validated, schema-compliant EDI XML and JSON payloads formatted directly for the Indonesian Directorate General of Customs and Excise.
+          </p>
+          <div class="code-box s5-code">
+            <div><span class="token-com">&lt;!-- PPFTZ-01 Declaration Payload · Validated Schema PPFTZ-01/4.2 --&gt;</span></div>
+            <div>&lt;<span class="token-tag">DeklarasiPPFTZ</span> <span class="token-attr">versi</span>=<span class="token-val">"4.2"</span> <span class="token-attr">kantorPabean</span>=<span class="token-val">"040300"</span> <span class="token-attr">kawasan</span>=<span class="token-val">"KPBPB-BTM"</span>&gt;</div>
+            <div style="padding-left: 24px;">&lt;<span class="token-tag">NilaiPabean</span> <span class="token-attr">valuta</span>=<span class="token-val">"USD"</span> <span class="token-attr">kursKMK</span>=<span class="token-num">"16200"</span>&gt;<span class="token-num">46022.00</span>&lt;/<span class="token-tag">NilaiPabean</span>&gt;</div>
+            <div style="padding-left: 24px;">&lt;<span class="token-tag">Fasilitas</span> <span class="token-attr">dasarHukum</span>=<span class="token-val">"PP-41-2021"</span> <span class="token-attr">status</span>=<span class="token-val">"100%_DIBEBASKAN"</span>/&gt;</div>
+            <div style="padding-left: 24px;">&lt;<span class="token-tag">Pungutan</span> <span class="token-attr">beaMasuk</span>=<span class="token-num">"0"</span> <span class="token-attr">ppn</span>=<span class="token-num">"0"</span> <span class="token-attr">pph22</span>=<span class="token-num">"0"</span>/&gt;</div>
+            <div>&lt;/<span class="token-tag">DeklarasiPPFTZ</span>&gt;</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 6: MARKET IMPACT & CLOSING (39.5s - 45.5s) -->
+      <section id="scene-6" class="clip" data-start="39.5" data-duration="6">
+        <div class="scene-inner" id="s6-content">
+          <div class="badge badge-cyan">Market Impact &amp; Traction</div>
+          <h1 class="h-hero">
+            Empowering 1,500+ Brokers &amp; Manufacturers.<br />
+            <span class="h-emerald">Frictionless International Trade for Batam.</span>
+          </h1>
+          <p class="subtitle" style="margin-bottom: 36px;">
+            Deployed for freight forwarders (PPJK) across Batamindo, Kabil Integrated Industrial Estate, and Panbil.
+          </p>
+          <div class="grid-3">
+            <div class="card s6-stat" style="text-align: center;">
+              <div class="stat-highlight">&gt; 90%</div>
+              <div class="card-title">Time Savings</div>
+              <div class="card-desc">Declaration prep drops from 4 hours to under 15 seconds.</div>
+            </div>
+            <div class="card s6-stat" style="text-align: center;">
+              <div class="stat-highlight">100%</div>
+              <div class="card-title">BTKI Compliance</div>
+              <div class="card-desc">Eliminates human classification errors and audits.</div>
+            </div>
+            <div class="card s6-stat" style="text-align: center;">
+              <div class="stat-highlight">Rp 0</div>
+              <div class="card-title">Demurrage Penalties</div>
+              <div class="card-desc">Fast-track green line clearance at Batu Ampar Port.</div>
+            </div>
+          </div>
+          <div style="margin-top: 32px;" class="s6-cta">
+            <div class="meta-pill" style="font-size: 16px; padding: 10px 24px; border-color: rgba(6, 182, 212, 0.4); color: #38bdf8;">
+              ⚓ PortSync FTZ — Hackathon 2026 Submission
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- GSAP Master Animation Timeline -->
+    <script>
+      const tl = gsap.timeline({ paused: true });
+
+      // Progress bar fill across full 45.5 seconds
+      tl.to("#progress-fill", { width: "100%", duration: 45.5, ease: "none" }, 0);
+
+      // Top bar scene counter updates
+      tl.set("#scene-counter", { textContent: "01 / 06" }, 0);
+      tl.set("#scene-counter", { textContent: "02 / 06" }, 7.5);
+      tl.set("#scene-counter", { textContent: "03 / 06" }, 15.5);
+      tl.set("#scene-counter", { textContent: "04 / 06" }, 24.5);
+      tl.set("#scene-counter", { textContent: "05 / 06" }, 32.5);
+      tl.set("#scene-counter", { textContent: "06 / 06" }, 39.5);
+
+      // SCENE 1: Hook & Context (0.0s - 7.5s)
+      tl.fromTo("#s1-content .badge", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.2);
+      tl.fromTo("#s1-content .h-hero", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 0.4);
+      tl.fromTo("#s1-content .subtitle", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.7);
+      tl.fromTo(".s1-card", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.15, ease: "power3.out" }, 1.1);
+      tl.to("#s1-content", { opacity: 0, y: -20, duration: 0.5, ease: "power2.in" }, 7.0);
+
+      // SCENE 2: The Problem (7.5s - 15.5s)
+      tl.fromTo("#s2-content .badge", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 7.7);
+      tl.fromTo("#s2-content .h-hero", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 7.9);
+      tl.fromTo("#s2-content .subtitle", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 8.2);
+      tl.fromTo(".s2-card", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.18, ease: "power3.out" }, 8.6);
+      tl.to("#s2-content", { opacity: 0, y: -20, duration: 0.5, ease: "power2.in" }, 15.0);
+
+      // SCENE 3: The Solution (15.5s - 24.5s)
+      tl.fromTo("#s3-content .badge", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 15.7);
+      tl.fromTo("#s3-content .h-hero", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 15.9);
+      tl.fromTo("#s3-content .subtitle", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 16.2);
+      tl.fromTo(".s3-node", { opacity: 0, scale: 0.95, y: 30 }, { opacity: 1, scale: 1, y: 0, duration: 0.6, stagger: 0.2, ease: "power3.out" }, 16.6);
+      tl.fromTo(".s3-arrow", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.2, ease: "power3.out" }, 17.0);
+      tl.fromTo(".s3-kpi", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.5)" }, 17.8);
+      tl.to("#s3-content", { opacity: 0, y: -20, duration: 0.5, ease: "power2.in" }, 24.0);
+
+      // SCENE 4: Dual Regime & Lartas (24.5s - 32.5s)
+      tl.fromTo("#s4-content .badge", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 24.7);
+      tl.fromTo("#s4-content .h-hero", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 24.9);
+      tl.fromTo("#s4-content .subtitle", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 25.2);
+      tl.fromTo(".s4-card", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.2, ease: "power3.out" }, 25.6);
+      tl.to("#s4-content", { opacity: 0, y: -20, duration: 0.5, ease: "power2.in" }, 32.0);
+
+      // SCENE 5: CEISA 4.0 Export (32.5s - 39.5s)
+      tl.fromTo("#s5-content .badge", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 32.7);
+      tl.fromTo("#s5-content .h-hero", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 32.9);
+      tl.fromTo("#s5-content .subtitle", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 33.2);
+      tl.fromTo(".s5-code", { opacity: 0, scale: 0.95, y: 30 }, { opacity: 1, scale: 1, y: 0, duration: 0.8, ease: "power3.out" }, 33.6);
+      tl.to("#s5-content", { opacity: 0, y: -20, duration: 0.5, ease: "power2.in" }, 39.0);
+
+      // SCENE 6: Impact & Closing (39.5s - 45.5s)
+      tl.fromTo("#s6-content .badge", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 39.7);
+      tl.fromTo("#s6-content .h-hero", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 39.9);
+      tl.fromTo("#s6-content .subtitle", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 40.2);
+      tl.fromTo(".s6-stat", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.15, ease: "power3.out" }, 40.6);
+      tl.fromTo(".s6-cta", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.5)" }, 41.5);
+
+      // Register master timeline on window.__timelines
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
