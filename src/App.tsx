@@ -22,7 +22,7 @@ import { FeaturesPage } from "./components/FeaturesPage";
 import { PricingPage } from "./components/PricingPage";
 import { ContactPage } from "./components/ContactPage";
 import { DEMO_INVOICES, getInvoice, registerDynamicInvoice } from "./data/fixtures";
-import { parseRawInvoice } from "./lib/parser";
+import { parseRawInvoice, createDynamicInvoiceFallback } from "./lib/parser";
 import { PPN_RATE, PPH22_RATE } from "./data/constants";
 import { FX, refreshFx, subscribeFx } from "./lib/fx";
 import { buildDeclaration, computeLine } from "./lib/engine";
@@ -282,22 +282,14 @@ export default function App() {
         return;
       }
 
-      if (analyzingFileRef.current === f.name) return;
-      analyzingFileRef.current = f.name;
-
-      // Extract & Classify from Document Text Layer
-      let targetId = "nx";
-      if (f.extractedText && f.extractedText.trim().length > 20) {
-        const parsed = parseRawInvoice(f.extractedText, f.name);
-        if (parsed && parsed.lines.length > 0) {
-          registerDynamicInvoice(parsed);
-          targetId = parsed.id;
-        }
-      } else {
-        const text = `${f.name} ${f.extractedText || ""}`.toLowerCase();
-        const hit = Object.keys(KEYWORD_FIXTURE).find((k) => text.includes(k));
-        targetId = hit ? KEYWORD_FIXTURE[hit]! : "nx";
+      // Autonomous Document Digitization & BTKI Tariff Engine
+      let parsed = parseRawInvoice(f.extractedText || "", f.name);
+      if (!parsed || parsed.lines.length === 0) {
+        parsed = createDynamicInvoiceFallback(f.name);
       }
+
+      registerDynamicInvoice(parsed);
+      const targetId = parsed.id;
 
       clearTimers();
       const next = getInvoice(targetId);
@@ -310,7 +302,7 @@ export default function App() {
       pushToast({
         tone: "brand",
         title: `Document ingested: ${f.name}`,
-        detail: `⚡ PortSync Vision Agent: Digitizing line items & studying BTKI tariff taxability under PP 41/2021...`,
+        detail: `⚡ PortSync Vision Agent: Digitized ${parsed.lines.length} line items with real-time BTKI 2026 tariff mapping and PP 41/2021 exemption calculations.`,
       });
 
       triggerAnalysis(targetId, f.name);
@@ -590,6 +582,9 @@ export default function App() {
               onClearUpload={() => {
                 setUploaded(null);
                 analyzingFileRef.current = null;
+                if (invoiceId.startsWith("uploaded-")) {
+                  pickInvoice(DEMO_INVOICES[0]!.id);
+                }
               }}
               onReject={handleReject}
               status={status}

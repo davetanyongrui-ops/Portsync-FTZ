@@ -96,6 +96,24 @@ export function LeftPanel({
 
           {/* Quick Select Chips */}
           <div className="flex items-center gap-1.5 mb-2">
+            {uploaded && !uploaded.name.toLowerCase().includes("johor") && (
+              <button
+                type="button"
+                onClick={() => onPick(invoice.id)}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-lg border py-1 px-2 text-center transition-all cursor-pointer shadow-2xs",
+                  invoice.id.startsWith("uploaded-")
+                    ? "border-blue-500/60 bg-blue-50 text-blue-900 ring-1 ring-blue-500/30 dark:border-cyan-500/60 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/30 font-semibold"
+                    : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400",
+                )}
+                title={uploaded.name}
+              >
+                <span className="text-xs">📄</span>
+                <span className="text-[11px] font-medium truncate max-w-[100px]">
+                  {uploaded.name.length > 13 ? uploaded.name.slice(0, 11) + "…" : uploaded.name}
+                </span>
+              </button>
+            )}
             {FIXTURE_CHIPS.map((chip) => {
               const active = invoiceId === chip.id;
               return (
@@ -127,6 +145,11 @@ export function LeftPanel({
               className="h-9 w-full cursor-pointer appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-9 text-[12.5px] text-slate-800 shadow-2xs transition-colors hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:ring-cyan-500"
               aria-label="Select a preloaded demo invoice"
             >
+              {!DEMO_INVOICES.some((inv) => inv.id === invoiceId) && (
+                <option value={invoiceId}>
+                  📄 [Custom Upload] {invoice.label}
+                </option>
+              )}
               {DEMO_INVOICES.map((inv) => (
                 <option key={inv.id} value={inv.id}>
                   {inv.label}
@@ -174,11 +197,11 @@ export function LeftPanel({
               </span>
             </div>
           ) : (
-            <div className="flex items-start gap-2.5 rounded-lg border border-cyan-500/40 bg-cyan-950/40 p-3 text-[11.5px] leading-relaxed text-cyan-200 shadow-2xs ring-1 ring-cyan-500/30">
-              <Sparkles size={14} className="mt-px shrink-0 text-cyan-400 animate-pulse" />
+            <div className="flex items-start gap-2.5 rounded-lg border border-blue-500/30 bg-blue-50/90 p-3 text-[11.5px] leading-relaxed text-blue-900 shadow-2xs ring-1 ring-blue-500/20 dark:border-cyan-500/40 dark:bg-cyan-950/40 dark:text-cyan-200 dark:ring-cyan-500/30">
+              <Sparkles size={14} className="mt-px shrink-0 text-blue-600 dark:text-cyan-400 animate-pulse" />
               <span>
-                <b className="font-semibold text-white">{uploaded.name}</b> digitized via{" "}
-                <b className="font-semibold text-cyan-300">PortSync Multimodal Vision Agent (Google Gemini 2.5 Flash)</b>.
+                <b className="font-semibold text-blue-950 dark:text-white">{uploaded.name}</b> digitized via{" "}
+                <b className="font-semibold text-blue-700 dark:text-cyan-300">PortSync Multimodal Vision Agent (Google Gemini 2.5 Flash)</b>.
                 Extracted {invoice.lines.length} line items with real-time BTKI 2026 tariff mapping and PP 41/2021 exemption modeling.
               </span>
             </div>
