@@ -6,7 +6,9 @@ export interface AuthUser {
   licenseNo?: string;
 }
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) || "http://localhost:3001";
+const API_BASE =
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  (import.meta.env.DEV ? "http://localhost:3001" : "");
 const SESSION_KEY = "portsync-ftz-session";
 
 export const DEFAULT_DEMO_USER: AuthUser = {
