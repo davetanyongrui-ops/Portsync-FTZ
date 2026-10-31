@@ -35,12 +35,16 @@ export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
           </div>
 
           <h1 className="mt-6 max-w-4xl bg-gradient-to-br from-white via-zinc-100 to-zinc-400 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-6xl sm:leading-[1.1]">
-            Zero-Latency Customs Declarations for Free Trade Zones
+            Autonomous Customs Intelligence for Batam’s Free Trade Zone
           </h1>
 
-          <p className="mt-6 max-w-2xl text-[16px] leading-relaxed text-zinc-400">
-            Parse supplier invoices, classify descriptions against 11,000+ BTKI HS codes, compute PPFTZ-01 facility
-            exemptions, and compile CEISA 4.0 XML &amp; JSON payloads in under 800ms.
+          <p className="mt-6 max-w-3xl text-[16px] leading-relaxed text-zinc-300">
+            Transforms unstructured foreign shipping manifests into validated, CEISA-ready PPFTZ-01 declarations,
+            automated BTKI 8-digit tariff mappings, and FTA duty optimizations in under 15 seconds.
+          </p>
+          <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-zinc-400">
+            Eliminate costly container detention at Pelabuhan Batu Ampar, avoid Jalur Merah (red-line audits),
+            and automate duty-free entry under PP No. 41/2021.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -225,7 +229,7 @@ export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
               </div>
 
               <div className="text-[12px] text-zinc-400 leading-relaxed">
-                Under Indonesian customs regulations (<span className="text-zinc-300 font-medium">PP 156/2015</span> jo. <span className="text-zinc-300 font-medium">PMK 111/PMK.04/2019</span>), consignments entering the Free Trade Zone (KPBPB Batam) are granted 100% suspension of Bea Masuk and PPN 11% while goods remain in the enclave.
+                Under Indonesian customs regulations (<span className="text-zinc-300 font-medium">PP No. 41/2021</span> jo. <span className="text-zinc-300 font-medium">PMK 111/PMK.04/2019</span>), consignments entering the Free Trade Zone (KPBPB Batam) are granted 100% suspension of Bea Masuk and PPN 11% while goods remain in the enclave.
               </div>
             </div>
 

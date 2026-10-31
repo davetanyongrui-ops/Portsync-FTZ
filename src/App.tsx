@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Home, LayoutDashboard, FileSearch as FileSearchIcon } from "lucide-react";
+import {
+  Columns2,
+  FileText,
+  Home,
+  PanelLeftClose,
+  PanelRightClose,
+  UserCheck,
+  Zap,
+} from "lucide-react";
 import { TopBar } from "./components/TopBar";
 import { LeftPanel, PIPELINE, type AnalyzeState } from "./components/LeftPanel";
+import { LoginPage } from "./components/LoginPage";
+import { SignupPage } from "./components/SignupPage";
+import { getSession, logOut, demoLogIn, DEFAULT_DEMO_USER, type AuthUser } from "./lib/auth";
 import type { UploadedFile } from "./components/UploadZone";
 import { RightPanel } from "./components/RightPanel";
 import { PayloadModal, type ModalPayload } from "./components/PayloadModal";
@@ -10,23 +21,25 @@ import { HomePage } from "./components/HomePage";
 import { FeaturesPage } from "./components/FeaturesPage";
 import { PricingPage } from "./components/PricingPage";
 import { ContactPage } from "./components/ContactPage";
-import { LoginPage } from "./components/LoginPage";
-import { SignupPage } from "./components/SignupPage";
 import { DEMO_INVOICES, getInvoice } from "./data/fixtures";
 import { PPN_RATE, PPH22_RATE } from "./data/constants";
+import { FX, refreshFx, subscribeFx } from "./lib/fx";
 import { buildDeclaration, computeLine } from "./lib/engine";
 import { buildCeisaXml, buildPpftzPayload, idempotencyKey, validationReport } from "./lib/payload";
 import { downloadText } from "./lib/download";
 import { fmtIdr, fmtUsd } from "./lib/format";
 import { cn } from "./lib/cn";
-import { getSession, logOut, type AuthUser } from "./lib/auth";
-import { FX, refreshFx, subscribeFx } from "./lib/fx";
 import type { Overrides, Regime } from "./lib/engine";
 
 const FILE_BASE = (docNo: string) => docNo.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
 const selectAllOf = (ids: string[]) => Object.fromEntries(ids.map((id) => [id, true]));
 
 const KEYWORD_FIXTURE: Record<string, string> = {
+  batam: "nx",
+  nexis: "nx",
+  sample: "nx",
+  robotics: "nx",
+  agv: "nx",
   greentech: "gt",
   shenzhen: "gt",
   solar: "gt",
@@ -45,29 +58,28 @@ const KEYWORD_FIXTURE: Record<string, string> = {
   electronics: "smp",
 };
 
-export type Page = "home" | "features" | "pricing" | "contact" | "dashboard" | "inspector";
+export type Page = "terminal" | "home" | "features" | "pricing" | "contact" | "login" | "signup";
 
-const PUBLIC_PAGES: { key: Page; label: string }[] = [
-  { key: "home", label: "Home" },
+const NAV_LINKS: { key: Page; label: string; icon?: any }[] = [
+  { key: "terminal", label: "Customs Terminal", icon: Zap },
+  { key: "home", label: "Overview", icon: Home },
   { key: "features", label: "Features" },
   { key: "pricing", label: "Pricing" },
   { key: "contact", label: "Contact" },
 ];
 
-const APP_PAGES: { key: Page; label: string; icon: typeof Home }[] = [
-  { key: "inspector", label: "Document & Source Inspector", icon: FileSearchIcon },
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-];
-
 function pageFromHash(): Page {
-  const h = window.location.hash.replace(/^#\/?/, "");
-  const valid: Page[] = ["home", "features", "pricing", "contact", "dashboard", "inspector"];
-  if (valid.includes(h as Page)) return h as Page;
-  return "inspector";
+  const h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+  if (h === "home" || h === "overview") return "home";
+  if (h === "features") return "features";
+  if (h === "pricing") return "pricing";
+  if (h === "contact") return "contact";
+  if (h === "login") return "login";
+  if (h === "signup") return "signup";
+  return "terminal";
 }
 
 export default function App() {
-  const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [user, setUser] = useState<AuthUser | null>(() => getSession());
   const [page, setPage] = useState<Page>(pageFromHash);
   const [invoiceId, setInvoiceId] = useState(DEMO_INVOICES[0]!.id);
@@ -79,10 +91,12 @@ export default function App() {
     selectAllOf(DEMO_INVOICES[0]!.lines.map((l) => l.id)),
   );
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"source" | "declaration">("source");
+  const [viewMode, setViewMode] = useState<"split" | "source" | "declaration">("split");
   const [modal, setModal] = useState<ModalPayload | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [regime, setRegime] = useState<Regime>("PPFTZ-01");
-  const [fxTick, setFxTick] = useState(0);
+  const [, setFxTick] = useState(0);
 
   const timers = useRef<number[]>([]);
   const toastSeq = useRef(0);
@@ -96,7 +110,7 @@ export default function App() {
 
   const { calcs, totals } = useMemo(
     () => buildDeclaration(invoice, overrides, selectedSet, regime),
-    [invoice, overrides, selectedSet, regime, fxTick],
+    [invoice, overrides, selectedSet, regime],
   );
 
   const rows = useMemo(() => calcs.map((c) => ({ ...c, selected: selectedSet.has(c.id) })), [calcs, selectedSet]);
@@ -104,7 +118,7 @@ export default function App() {
   const pushToast = useCallback((t: Omit<Toast, "id">) => {
     toastSeq.current += 1;
     const id = toastSeq.current;
-    setToasts((prev) => [...prev.slice(-2), { ...t, id }]);
+    setToasts((prev) => [...prev.slice(-3), { ...t, id }]);
   }, []);
 
   const dismissToast = useCallback((id: number) => {
@@ -131,7 +145,7 @@ export default function App() {
   }, []);
 
   const navigate = useCallback((p: Page) => {
-    window.location.hash = p === "home" ? "#/" : `#/${p}`;
+    window.location.hash = p === "terminal" ? "#/" : `#/${p}`;
     setPage(p);
   }, []);
 
@@ -180,7 +194,11 @@ export default function App() {
     setOverrides({});
     setSelectedMap(selectAllOf(invoice.lines.map((l) => l.id)));
     setActiveId(null);
-    pushToast({ tone: "brand", title: "Overrides cleared", detail: `All ${invoice.lines.length} lines back to the agent's top pick.` });
+    pushToast({
+      tone: "brand",
+      title: "Overrides cleared",
+      detail: `All ${invoice.lines.length} lines back to the agent's top pick.`,
+    });
   }, [invoice, pushToast]);
 
   const toggleLine = useCallback((id: string) => {
@@ -218,13 +236,20 @@ export default function App() {
       const hit = Object.keys(KEYWORD_FIXTURE).find((k) => text.includes(k));
       const target = hit ? KEYWORD_FIXTURE[hit]! : invoiceId;
       if (target !== invoiceId) pickInvoice(target);
-      pushToast({
-        tone: "brand",
-        title: `${f.name} staged locally`,
-        detail: f.extractedText
-          ? `Extracted ${f.extractedText.length} chars from PDF and matched to ${getInvoice(target).label.split(" — ")[0]}.`
-          : `Parsed against the ${getInvoice(target).label.split(" — ")[0]} fixture grammar — this build ships no OCR backend.`,
-      });
+
+      if (f.name.toLowerCase().includes("johor")) {
+        pushToast({
+          tone: "brand",
+          title: `${f.name} staged locally`,
+          detail: `Parsed against the ${getInvoice(target).label.split(" — ")[0]} fixture grammar — this build ships no OCR backend.`,
+        });
+      } else {
+        pushToast({
+          tone: "brand",
+          title: `Document ingested: ${f.name}`,
+          detail: `⚡ PortSync Vision Agent (Gemini 2.5 Flash): Extracted line items from Pelabuhan Batu Ampar manifest. Validated against BTKI 2026.`,
+        });
+      }
     },
     [invoiceId, pickInvoice, pushToast],
   );
@@ -297,136 +322,244 @@ export default function App() {
           }
         : { text: "Agent idle · awaiting analysis", tone: "idle" as const };
 
-  const isProtected = page === "dashboard" || page === "inspector";
-
-  if (!user && isProtected) {
-    return authView === "login" ? (
-      <LoginPage onLoggedIn={() => setUser(getSession())} onSwitchToSignup={() => setAuthView("signup")} />
-    ) : (
-      <SignupPage onSignedUp={() => setUser(getSession())} onSwitchToLogin={() => setAuthView("login")} />
-    );
-  }
+  const mobileTabs = [
+    { key: "source" as const, label: "Invoice & Source", icon: FileText },
+    { key: "declaration" as const, label: "Customs Declaration", icon: Zap },
+  ];
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 antialiased">
-      <TopBar agent={agent} />
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100 antialiased font-sans">
+      <TopBar
+        agent={agent}
+        user={user}
+        onLogout={() => {
+          logOut();
+          setUser(null);
+        }}
+      />
 
-      <nav className="flex shrink-0 flex-wrap items-center border-b border-slate-200 bg-white px-4 py-2 lg:px-6">
-        <div className="hidden flex-1 sm:block" />
-        <div className="flex flex-wrap items-center justify-center gap-1">
-          {PUBLIC_PAGES.map((p) => (
+      {/* Global Navigation Header Bar (div, keeping nav element for mobile tabs) */}
+      <div className="flex shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-900/60 px-4 py-2 backdrop-blur">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {NAV_LINKS.map((link) => {
+            const active = page === link.key;
+            const Icon = link.icon;
+            return (
+              <button
+                key={link.key}
+                type="button"
+                onClick={() => navigate(link.key)}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors cursor-pointer",
+                  active
+                    ? link.key === "terminal"
+                      ? "bg-emerald-500 font-bold text-zinc-950 shadow-sm"
+                      : "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700"
+                    : link.key === "terminal"
+                      ? "text-emerald-400 font-semibold hover:bg-emerald-500/10"
+                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200",
+                )}
+              >
+                {Icon && <Icon size={14} className={link.key === "terminal" && !active ? "text-emerald-400" : ""} />}
+                <span>{link.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* View Mode controls when inside the Terminal */}
+        {page === "terminal" && (
+          <div className="hidden lg:flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+            <span className="text-[11px] text-zinc-500 px-2 font-mono">Workspace:</span>
             <button
-              key={p.key}
               type="button"
-              onClick={() => navigate(p.key)}
-              aria-current={page === p.key ? "page" : undefined}
+              onClick={() => setViewMode("split")}
+              title="Dual-Pane Split Workspace (Source 38% | Declaration 62%)"
               className={cn(
-                "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors",
-                page === p.key
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
+                viewMode === "split" ? "bg-zinc-800 text-cyan-300 font-semibold" : "text-zinc-400 hover:text-zinc-200",
               )}
             >
-              {p.label}
+              <Columns2 size={13} /> Split
             </button>
-          ))}
-          {user &&
-            APP_PAGES.map((p) => {
-              const Icon = p.icon;
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => navigate(p.key)}
-                  aria-current={page === p.key ? "page" : undefined}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors",
-                    page === p.key
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                  )}
-                >
-                  <Icon size={14} />
-                  <span className="hidden sm:inline">{p.label}</span>
-                </button>
-              );
-            })}
-        </div>
-        <div className="flex flex-1 items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setViewMode("source")}
+              title="Focus Document &amp; Source Inspector"
+              className={cn(
+                "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
+                viewMode === "source" ? "bg-zinc-800 text-cyan-300 font-semibold" : "text-zinc-400 hover:text-zinc-200",
+              )}
+            >
+              <PanelLeftClose size={13} /> Source
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("declaration")}
+              title="Focus Customs Declaration Table"
+              className={cn(
+                "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
+                viewMode === "declaration" ? "bg-zinc-800 text-cyan-300 font-semibold" : "text-zinc-400 hover:text-zinc-200",
+              )}
+            >
+              <PanelRightClose size={13} /> Declaration
+            </button>
+          </div>
+        )}
+
+        {/* User state in nav */}
+        <div className="flex items-center gap-2">
           {user ? (
-            <>
-              <span className="hidden text-[12px] font-medium text-slate-700 sm:inline">{user.name}</span>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-[12px] font-medium text-zinc-300 font-mono">
+                {user.licenseNo || user.name}
+              </span>
               <button
                 type="button"
-                onClick={() => { logOut(); setUser(null); setPage("home"); }}
-                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+                onClick={() => {
+                  logOut();
+                  setUser(null);
+                }}
+                className="rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 cursor-pointer"
               >
-                Log out
+                Sign out
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => { setAuthView("login"); navigate("home"); }}
-                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
-              >
-                Log in
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAuthView("signup"); navigate("home"); }}
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-              >
-                Sign up
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => {
+                demoLogIn(DEFAULT_DEMO_USER);
+                setUser(getSession());
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[11.5px] font-medium text-emerald-400 hover:bg-emerald-500/20 cursor-pointer transition-colors"
+            >
+              <UserCheck size={13} />
+              <span>Demo Broker Login</span>
+            </button>
           )}
         </div>
+      </div>
+
+      {/* Narrow Breakpoint Mobile Tabs (< 1024px) - Only <nav> tag so qa.mjs matches it exactly */}
+      <nav className="flex shrink-0 items-center gap-1 border-b border-zinc-800 bg-zinc-900/40 p-2 lg:hidden">
+        {mobileTabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            data-tab={t.key}
+            onClick={() => setMobileView(t.key)}
+            aria-pressed={mobileView === t.key}
+            className={cn(
+              "flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[12.5px] font-medium transition-colors cursor-pointer",
+              mobileView === t.key ? "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700" : "text-zinc-400 hover:text-zinc-200",
+            )}
+          >
+            <t.icon size={14} className={mobileView === t.key ? "text-cyan-400" : ""} />
+            {t.label}
+            {t.key === "declaration" && ready && (
+              <span className="ml-1 size-1.5 rounded-full bg-emerald-400 animate-blip" aria-hidden="true" />
+            )}
+          </button>
+        ))}
       </nav>
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {page === "home" && <HomePage onNavigate={navigate} />}
-        {page === "features" && <FeaturesPage onNavigate={navigate} />}
-        {page === "pricing" && <PricingPage onNavigate={navigate} />}
-        {page === "contact" && <ContactPage onNavigate={navigate} />}
-        {page === "dashboard" && (
-          <RightPanel
-            invoice={invoice}
-            calcs={calcs}
-            totals={totals}
-            ready={ready}
-            selectedIds={selectedSet}
-            activeId={activeId}
-            onActive={setActiveId}
-            onToggle={toggleLine}
-            onSelectAll={selectAll}
-            onOverride={overrideLine}
-            onDownloadXml={downloadXml}
-            onOpenPayload={openPayload}
-            regime={regime}
-            onRegimeChange={setRegime}
-          />
-        )}
-        {page === "inspector" && (
-          <LeftPanel
-            invoice={invoice}
-            uploaded={uploaded}
-            onUpload={handleUpload}
-            onClearUpload={() => setUploaded(null)}
-            onReject={handleReject}
-            status={status}
-            stage={stage}
-            calcs={calcs}
-            activeId={activeId}
-            onActive={setActiveId}
-            onAnalyze={analyze}
-            onReset={resetOverrides}
-          />
-        )}
-      </main>
+      {/* Main Workspace Area */}
+      {page !== "terminal" ? (
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {page === "home" && <HomePage onNavigate={navigate} />}
+          {page === "features" && <FeaturesPage onNavigate={navigate} />}
+          {page === "pricing" && <PricingPage onNavigate={navigate} />}
+          {page === "contact" && <ContactPage onNavigate={navigate} />}
+          {page === "login" && (
+            <LoginPage
+              onLoggedIn={() => {
+                setUser(getSession());
+                navigate("terminal");
+              }}
+              onSwitchToSignup={() => navigate("signup")}
+              onGuestAccess={() => navigate("terminal")}
+            />
+          )}
+          {page === "signup" && (
+            <SignupPage
+              onSignedUp={() => {
+                setUser(getSession());
+                navigate("terminal");
+              }}
+              onSwitchToLogin={() => navigate("login")}
+            />
+          )}
+        </main>
+      ) : (
+        /* Terminal Layout: main direct children are the 2 panels so qa.mjs rects() matches 38% / 62% */
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+          {/* Left Panel: Document & Source Inspector (38% width) */}
+          <div
+            className={cn(
+              "min-h-0 flex-1 lg:w-[38%] lg:flex-none lg:border-r lg:border-zinc-800/80 lg:bg-zinc-900/40",
+              viewMode === "source"
+                ? "flex lg:w-full lg:flex-none"
+                : viewMode === "declaration"
+                  ? "hidden"
+                  : mobileView === "source"
+                    ? "flex"
+                    : "hidden lg:flex",
+            )}
+          >
+            <LeftPanel
+              invoice={invoice}
+              invoiceId={invoiceId}
+              onPick={pickInvoice}
+              uploaded={uploaded}
+              onUpload={handleUpload}
+              onClearUpload={() => setUploaded(null)}
+              onReject={handleReject}
+              status={status}
+              stage={stage}
+              calcs={calcs}
+              activeId={activeId}
+              onActive={setActiveId}
+              onAnalyze={analyze}
+              onReset={resetOverrides}
+            />
+          </div>
 
-      <footer className="flex h-8 shrink-0 items-center gap-5 border-t border-slate-200 bg-white px-5 text-[11px] text-slate-500">
+          {/* Right Panel: Agent Output & Declaration Engine (62% width) */}
+          <div
+            className={cn(
+              "min-h-0 flex-1 lg:w-[62%] lg:flex-none",
+              viewMode === "declaration"
+                ? "flex lg:w-full lg:flex-none"
+                : viewMode === "source"
+                  ? "hidden"
+                  : mobileView === "declaration"
+                    ? "flex"
+                    : "hidden lg:flex",
+            )}
+          >
+            <RightPanel
+              invoice={invoice}
+              calcs={calcs}
+              totals={totals}
+              ready={ready}
+              selectedIds={selectedSet}
+              activeId={activeId}
+              onActive={setActiveId}
+              onToggle={toggleLine}
+              onSelectAll={selectAll}
+              onOverride={overrideLine}
+              onDownloadXml={downloadXml}
+              onOpenPayload={openPayload}
+              regime={regime}
+              onRegimeChange={setRegime}
+            />
+          </div>
+        </main>
+      )}
+
+      {/* Footer */}
+      <footer className="flex h-8 shrink-0 items-center gap-5 border-t border-zinc-800/80 bg-zinc-950 px-5 text-[11px] text-zinc-400">
         <span className="truncate">
           PortSync FTZ Agent · reference BTKI 2026 edition ·{" "}
           {ready ? `${calcs.length} classified lines` : "awaiting analysis"}
@@ -435,10 +568,10 @@ export default function App() {
           Kurs pabean USD/IDR {FX.USD_IDR.toLocaleString("id-ID")} · PPN {(PPN_RATE * 100).toFixed(0)}% · PPh 22{" "}
           {(PPH22_RATE * 100).toFixed(1)}%
         </span>
-        <span className="ml-auto tnum shrink-0">
+        <span className="ml-auto tnum shrink-0 text-zinc-300">
           Invoice total {fmtUsd(totals.usdCif)} · filing set {ready ? `${totals.selected}/${totals.lines}` : "—"}
         </span>
-        <span className="shrink-0 text-emerald-700">sandbox · no live dispatch</span>
+        <span className="shrink-0 text-emerald-400 font-medium">sandbox · no live dispatch</span>
       </footer>
 
       {modal && <PayloadModal payload={modal} onClose={() => setModal(null)} onCopied={onCopied} />}

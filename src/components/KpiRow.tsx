@@ -196,7 +196,7 @@ export function KpiRow({
           footnote={
             ready && pre > 0 ? (
               <span className="tnum text-rose-400">
-                {pre} line(s) block submission until permits/SNI are uploaded
+                {pre} line(s) block PIB submission until permits/SNI are uploaded
               </span>
             ) : ready && totals.highRisk > 0 ? (
               "all restrictions are post-border — file, then report"

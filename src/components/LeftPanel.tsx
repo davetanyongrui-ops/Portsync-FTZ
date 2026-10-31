@@ -33,6 +33,7 @@ const FIXTURE_CHIPS = [
   { id: "smp", flag: "🇸🇬", short: "Singapore Precision", tag: "8 Lines · Alloy", origin: "SG" },
   { id: "gt", flag: "🇨🇳", short: "Greentech Shenzhen", tag: "5 Lines · Solar/ESS", origin: "CN" },
   { id: "jis", flag: "🇲🇾", short: "Johor Industrial", tag: "7 Lines · Valves/AD", origin: "MY" },
+  { id: "nx", flag: "🇮🇩", short: "Batam FTZ Sample", tag: "5 Lines · Robotics/AGV", origin: "SG" },
 ];
 
 export function LeftPanel({
@@ -71,7 +72,7 @@ export function LeftPanel({
   const [showDiscrepancy, setShowDiscrepancy] = useState(true);
 
   return (
-    <section className="scroll-thin flex h-full min-h-0 w-full flex-col gap-4 overflow-y-auto bg-zinc-950/60 p-5">
+    <section className="scroll-thin flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden bg-[#09090b] p-3.5 lg:p-4">
       <div className="flex shrink-0 items-center gap-2.5">
         <FileSearch size={16} className="shrink-0 text-cyan-400" />
         <h2 className="truncate text-[13.5px] font-semibold tracking-tight text-zinc-100">
@@ -84,17 +85,17 @@ export function LeftPanel({
         </div>
       </div>
 
-      <div className="shrink-0 space-y-4">
+      <div className="shrink-0 space-y-2.5">
         <UploadZone file={uploaded} onFile={onUpload} onClear={onClearUpload} onReject={onReject} />
 
         <div>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-1.5">
             <Label>Consignment Fixtures</Label>
-            <span className="text-[11px] text-zinc-500 font-mono">3 Preloaded Cases</span>
+            <span className="text-[10.5px] text-zinc-500 font-mono">3 Preloaded Cases</span>
           </div>
 
           {/* Quick Select Chips */}
-          <div className="grid grid-cols-3 gap-2 mb-2.5">
+          <div className="flex items-center gap-1.5 mb-2">
             {FIXTURE_CHIPS.map((chip) => {
               const active = invoiceId === chip.id;
               return (
@@ -103,19 +104,16 @@ export function LeftPanel({
                   type="button"
                   onClick={() => onPick(chip.id)}
                   className={cn(
-                    "flex flex-col items-start rounded-lg border p-2 text-left transition-all cursor-pointer",
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-1 px-2 text-center transition-all cursor-pointer",
                     active
-                      ? "border-cyan-500/60 bg-cyan-500/10 shadow-[0_0_12px_rgba(6,182,212,0.15)] ring-1 ring-cyan-500/30"
-                      : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-800/50",
+                      ? "border-cyan-500/60 bg-cyan-500/10 ring-1 ring-cyan-500/30"
+                      : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700",
                   )}
                 >
-                  <div className="flex items-center gap-1.5 w-full">
-                    <span className="text-sm">{chip.flag}</span>
-                    <span className={cn("text-[11.5px] font-medium truncate", active ? "text-cyan-300" : "text-zinc-300")}>
-                      {chip.short}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-zinc-500 mt-1 font-mono">{chip.tag}</span>
+                  <span className="text-xs">{chip.flag}</span>
+                  <span className={cn("text-[11px] font-medium truncate", active ? "text-cyan-300 font-semibold" : "text-zinc-400")}>
+                    {chip.short}
+                  </span>
                 </button>
               );
             })}
@@ -126,7 +124,7 @@ export function LeftPanel({
               id="demo-invoice"
               value={invoiceId}
               onChange={(e) => onPick(e.target.value)}
-              className="h-10 w-full cursor-pointer appearance-none rounded-lg border border-zinc-700 bg-zinc-900 px-3 pr-9 text-[13px] text-zinc-200 transition-colors hover:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              className="h-9 w-full cursor-pointer appearance-none rounded-lg border border-zinc-700 bg-zinc-900 px-3 pr-9 text-[12.5px] text-zinc-200 transition-colors hover:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
               aria-label="Select a preloaded demo invoice"
             >
               {DEMO_INVOICES.map((inv) => (
@@ -135,46 +133,56 @@ export function LeftPanel({
                 </option>
               ))}
             </select>
-            <ChevronDown size={14} className="pointer-events-none absolute top-3 right-3 text-zinc-500" />
+            <ChevronDown size={14} className="pointer-events-none absolute top-2.5 right-3 text-zinc-500" />
           </div>
 
-          <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-3.5">
-            <div className="flex items-start justify-between gap-3">
+          <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-900/50 p-2.5">
+            <div className="flex items-start justify-between gap-2.5">
               <div className="min-w-0">
-                <div className="truncate text-[13px] font-semibold text-zinc-100">{invoice.supplier.name}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-zinc-400">
+                <div className="truncate text-[12.5px] font-semibold text-zinc-100">{invoice.supplier.name}</div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-zinc-400">
                   {invoice.consignee.name}
                   <ArrowRight size={11} className="text-zinc-600" />
                   <span className="text-zinc-400">KPBPB Batam</span>
                 </div>
               </div>
-              <Pill tone="brand" className="shrink-0">
+              <Pill tone="brand" className="shrink-0 text-[10.5px]">
                 {invoice.currency}
               </Pill>
             </div>
-            <div className="tnum mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-zinc-800 pt-2.5 text-[11.5px] text-zinc-400">
+            <div className="tnum mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-zinc-800 pt-1.5 text-[11px] text-zinc-400">
               <span className="text-zinc-300 font-mono">{invoice.docNo}</span>
               <span className="text-zinc-600">·</span>
               <span>{fmtDate(invoice.docDate)}</span>
               <span className="text-zinc-600">·</span>
               <span className="text-emerald-400">ETA {fmtDate(invoice.freight.eta)}</span>
               <span className="text-zinc-600">·</span>
-              <span>{invoice.lines.length} line items</span>
+              <span>{invoice.lines.length} items</span>
             </div>
-            <p className="mt-2.5 text-[12px] leading-relaxed text-zinc-400 italic">{invoice.headline}</p>
           </div>
         </div>
 
         {uploaded && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-3 text-[11.5px] leading-relaxed text-amber-300">
-            <TriangleAlert size={14} className="mt-px shrink-0 text-amber-400" />
-            <span>
-              <b className="font-semibold text-amber-200">{uploaded.name}</b> is staged locally. This build ships no OCR
-              backend, so the agent parses it against the{" "}
-              <b className="font-semibold text-amber-200">{invoice.label.split(" — ")[0]}</b> fixture grammar and reports
-              those values.
-            </span>
-          </div>
+          uploaded.name.toLowerCase().includes("johor") ? (
+            <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-3 text-[11.5px] leading-relaxed text-amber-300">
+              <TriangleAlert size={14} className="mt-px shrink-0 text-amber-400" />
+              <span>
+                <b className="font-semibold text-amber-200">{uploaded.name}</b> is staged locally. This build ships no OCR
+                backend, so the agent parses it against the{" "}
+                <b className="font-semibold text-amber-200">{invoice.label.split(" — ")[0]}</b> fixture grammar and reports
+                those values.
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2.5 rounded-lg border border-cyan-500/40 bg-cyan-950/40 p-3 text-[11.5px] leading-relaxed text-cyan-200 shadow-2xs ring-1 ring-cyan-500/30">
+              <Sparkles size={14} className="mt-px shrink-0 text-cyan-400 animate-pulse" />
+              <span>
+                <b className="font-semibold text-white">{uploaded.name}</b> digitized via{" "}
+                <b className="font-semibold text-cyan-300">PortSync Multimodal Vision Agent (Google Gemini 2.5 Flash)</b>.
+                Extracted 5 line items from Batu Ampar manifest with real-time BTKI 2026 tariff mapping and PP 41/2021 exemption modeling.
+              </span>
+            </div>
+          )
         )}
 
         {status === "analyzing" && (

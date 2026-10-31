@@ -235,7 +235,7 @@ export function DeclarationTable({
   const allSelected = calcs.every((c) => selectedIds.has(c.id));
 
   return (
-    <div className="scroll-thin min-h-0 max-h-[46vh] flex-1 overflow-auto rounded-xl border border-zinc-800 bg-zinc-950/60 shadow-xs lg:max-h-[46vh]">
+    <div className="scroll-thin min-h-0 flex-1 overflow-auto rounded-xl border border-zinc-800 bg-zinc-950/60 shadow-xs">
       <table className="w-full min-w-[760px] table-fixed border-collapse">
         <colgroup>
           {COLS.map((w) => (

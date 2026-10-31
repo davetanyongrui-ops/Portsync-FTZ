@@ -42,12 +42,15 @@ export function UploadZone({
       return;
     }
     const base = { name: f.name, sizeKb, mime: f.type || "application/octet-stream" };
+    onFile(base);
     if (/\.pdf$/i.test(f.name)) {
       extractPdfText(f)
-        .then((txt) => onFile({ ...base, extractedText: txt }))
-        .catch(() => onFile(base));
-    } else {
-      onFile(base);
+        .then((txt) => {
+          if (txt && txt.trim().length > 0) {
+            onFile({ ...base, extractedText: txt });
+          }
+        })
+        .catch(() => {});
     }
   };
 
