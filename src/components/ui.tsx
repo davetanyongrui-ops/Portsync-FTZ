@@ -15,12 +15,12 @@ import type { RegulatoryBadge } from "../types";
 export type Tone = "good" | "warn" | "bad" | "brand" | "iris" | "mut";
 
 const TONE: Record<Tone, string> = {
-  good: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  warn: "border-amber-200 bg-amber-50 text-amber-700",
-  bad: "border-rose-200 bg-rose-50 text-rose-700",
-  brand: "border-blue-200 bg-blue-50 text-blue-700",
-  iris: "border-violet-200 bg-violet-50 text-violet-700",
-  mut: "border-slate-200 bg-slate-100 text-slate-600",
+  good: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  warn: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+  bad: "border-rose-500/30 bg-rose-500/10 text-rose-400",
+  brand: "border-cyan-500/30 bg-cyan-500/10 text-cyan-400",
+  iris: "border-violet-500/30 bg-violet-500/10 text-violet-400",
+  mut: "border-zinc-700/70 bg-zinc-850/80 text-zinc-400",
 };
 
 export function Pill({
@@ -70,14 +70,15 @@ export function RegBadgeView({ badge }: { badge: RegulatoryBadge }) {
 }
 
 export const TONE_DOT: Record<Tone, string> = {
-  good: "bg-emerald-500",
-  warn: "bg-amber-500",
-  bad: "bg-rose-500",
-  brand: "bg-blue-500",
-  iris: "bg-violet-500",
-  mut: "bg-slate-400",
+  good: "bg-emerald-400",
+  warn: "bg-amber-400",
+  bad: "bg-rose-400",
+  brand: "bg-cyan-400",
+  iris: "bg-violet-400",
+  mut: "bg-zinc-500",
 };
 
+/** Classifier agreement with the BTKI register - colour only, so a figure never prints twice. */
 export const confidenceTone = (value: number): Tone => {
   const pct = Math.round(value * 100);
   return pct >= 92 ? "good" : pct >= 75 ? "brand" : pct >= 60 ? "warn" : "bad";
@@ -93,9 +94,9 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const BTN: Record<NonNullable<BtnProps["variant"]>, string> = {
   primary:
-    "border-transparent bg-blue-600 font-semibold text-white shadow-sm shadow-blue-500/20 hover:bg-blue-700 disabled:hover:bg-blue-600",
-  secondary: "border-slate-300 bg-white text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900",
-  ghost: "border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+    "border-emerald-500/30 bg-emerald-500 font-semibold text-zinc-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 hover:shadow-emerald-500/30 disabled:hover:bg-emerald-500",
+  secondary: "border-zinc-700/80 bg-zinc-900/90 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 hover:text-white",
+  ghost: "border-transparent text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100",
 };
 
 export function Btn({
@@ -112,7 +113,7 @@ export function Btn({
     <button
       {...rest}
       className={cn(
-        "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border text-[13px] tracking-tight whitespace-nowrap transition-colors duration-150 select-none",
+        "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border text-[13px] tracking-tight whitespace-nowrap transition-all duration-150 select-none",
         "disabled:cursor-not-allowed disabled:opacity-40 active:translate-y-px",
         size === "sm" ? "h-8 px-3 text-[12px]" : "h-10 px-4",
         BTN[variant],
@@ -151,13 +152,13 @@ export function Checkbox({
       <span
         className={cn(
           "grid size-4 place-items-center rounded-[5px] border transition-colors",
-          "peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-white",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-zinc-950",
           checked
-            ? "border-blue-600 bg-blue-600 text-white"
-            : "border-slate-300 bg-white text-transparent hover:border-slate-400",
+            ? "border-emerald-500 bg-emerald-500 text-zinc-950"
+            : "border-zinc-700 bg-zinc-900 text-transparent hover:border-zinc-500",
         )}
       >
-        <svg viewBox="0 0 12 12" className="size-[10px]" fill="none" stroke="currentColor" strokeWidth={2.4}>
+        <svg viewBox="0 0 12 12" className="size-[10px]" fill="none" stroke="currentColor" strokeWidth={2.6}>
           <path d="M2 6.2 4.6 8.8 10 3.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
@@ -167,6 +168,6 @@ export function Checkbox({
 
 export function Label({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("text-xs font-medium tracking-wider text-slate-500 uppercase", className)}>{children}</div>
+    <div className={cn("text-xs font-medium tracking-wider text-zinc-400 uppercase", className)}>{children}</div>
   );
 }
