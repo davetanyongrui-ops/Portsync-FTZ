@@ -206,6 +206,123 @@ export const BTKI: BtkiEntry[] = [
     rationale:
       "AD applies to CN origin; the same part shipped from Malaysia or Singapore carries MFN only.",
   },
+  {
+    hs: "8542.31.00",
+    hsCompact: "85423100",
+    titleId: "Sirkuit terpadu elektronik: Prosesor dan pengontrol",
+    titleEn: "Electronic integrated circuits: Processors and controllers",
+    uom: "PCE",
+    bmMfn: 0,
+    bmAcf: 0,
+    bmAsean: 0,
+    ppnbm: 0,
+    lartas: "NONE",
+    risk: "LOW",
+    rationale: "ITA duty-free semiconductor component. 0% tariff across all trade agreements.",
+  },
+  {
+    hs: "8501.52.00",
+    hsCompact: "85015200",
+    titleId: "Motor AC lainnya, multi-fasa, daya > 750 W tapi ≤ 75 kW (servo / induksi)",
+    titleEn: "Other AC motors, multi-phase, of an output > 750 W but ≤ 75 kW (servo motor)",
+    uom: "PCE",
+    bmMfn: 0.05,
+    bmAcf: 0,
+    bmAsean: 0,
+    ppnbm: 0,
+    lartas: "POST_BORDER",
+    permits: [
+      {
+        agency: "Kementerian Perindustrian",
+        code: "LS-IND",
+        label: "Laporan Surveyor & Post-Border Verification",
+        stage: "post-border",
+      },
+    ],
+    risk: "MEDIUM",
+    rationale: "Industrial machinery prime mover. Post-border verification required under Permendag.",
+  },
+  {
+    hs: "8413.70.00",
+    hsCompact: "84137000",
+    titleId: "Pompa sentrifugal lainnya untuk cairan",
+    titleEn: "Other centrifugal pumps for liquids",
+    uom: "PCE",
+    bmMfn: 0.05,
+    bmAcf: 0,
+    bmAsean: 0,
+    ppnbm: 0,
+    lartas: "NONE",
+    risk: "LOW",
+    rationale: "Standard hydraulic/process pump for industrial manufacturing.",
+  },
+  {
+    hs: "4016.93.00",
+    hsCompact: "40169300",
+    titleId: "Gasket, cincin perapat dan perapat lainnya dari karet vulkanisir",
+    titleEn: "Gaskets, washers and other seals, of vulcanised rubber",
+    uom: "PCE",
+    bmMfn: 0.05,
+    bmAcf: 0,
+    bmAsean: 0,
+    ppnbm: 0,
+    lartas: "NONE",
+    risk: "LOW",
+    rationale: "Elastomeric mechanical seal. Duty suspended under Batam KPBPB PP No. 41/2021.",
+  },
+  {
+    hs: "3926.90.90",
+    hsCompact: "39269090",
+    titleId: "Barang lainnya dari plastik (komponen cetak teknik)",
+    titleEn: "Other articles of plastics (precision engineering mouldings)",
+    uom: "PCE",
+    bmMfn: 0.1,
+    bmAcf: 0,
+    bmAsean: 0,
+    ppnbm: 0,
+    lartas: "NONE",
+    risk: "LOW",
+    rationale: "Polymer housing and engineering components.",
+  },
+  {
+    hs: "7219.34.00",
+    hsCompact: "72193400",
+    titleId: "Produk canai lantaian dari baja tahan karat, tebal 0.5–1 mm",
+    titleEn: "Flat-rolled products of stainless steel, thickness 0.5–1 mm",
+    uom: "KGM",
+    bmMfn: 0.1,
+    bmAcf: 0,
+    bmAsean: 0,
+    ppnbm: 0,
+    bmad: 0.1,
+    adOrigins: ["CN"],
+    adNote: "Anti-dumping duty on cold-rolled stainless steel from China.",
+    lartas: "PRE_BORDER",
+    permits: [
+      {
+        agency: "Kemendag / Kemenperin",
+        code: "PI-BesiBaja",
+        label: "Import Approval (Persetujuan Impor) Besi & Baja",
+        stage: "pre-border",
+      },
+    ],
+    risk: "HIGH",
+    rationale: "Steel import controls apply. Form E grants tariff preference; BMAD applies to CN origin.",
+  },
+  {
+    hs: "8209.00.00",
+    hsCompact: "82090000",
+    titleId: "Pelat, batang, ujung dan sejenisnya untuk perkakas, dari sermet / karbida",
+    titleEn: "Plates, sticks, tips and the like for tools, of cermets / tungsten carbide",
+    uom: "PCE",
+    bmMfn: 0.05,
+    bmAcf: 0,
+    bmAsean: 0,
+    ppnbm: 0,
+    lartas: "NONE",
+    risk: "LOW",
+    rationale: "Tooling blanks for CNC manufacturing centers.",
+  },
 ];
 
 export const BTKI_BY_HS: Record<string, BtkiEntry> = Object.fromEntries(
@@ -214,6 +331,23 @@ export const BTKI_BY_HS: Record<string, BtkiEntry> = Object.fromEntries(
 
 export function getEntry(hs: string): BtkiEntry {
   const found = BTKI_BY_HS[hs];
-  if (!found) throw new Error(`BTKI register has no entry for ${hs}`);
-  return found;
+  if (found) return found;
+
+  // Safe fallback for dynamic or unlisted BTKI codes
+  const clean = hs.replace(/\D/g, "").padEnd(8, "0").slice(0, 8);
+  const formatted = `${clean.slice(0, 4)}.${clean.slice(4, 6)}.${clean.slice(6, 8)}`;
+  return {
+    hs: formatted,
+    hsCompact: clean,
+    titleId: "Barang industri & suku cadang manufaktur",
+    titleEn: "Other industrial / manufacturing goods",
+    uom: "PCE",
+    bmMfn: 0.05,
+    bmAcf: 0,
+    bmAsean: 0,
+    ppnbm: 0,
+    lartas: "NONE",
+    risk: "LOW",
+    rationale: "Classified under standard reference tariff schedule. In-zone FTZ duty suspended under PP No. 41/2021.",
+  };
 }

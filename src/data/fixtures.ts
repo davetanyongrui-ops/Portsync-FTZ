@@ -687,8 +687,14 @@ export const DEMO_INVOICES: DemoInvoice[] = [
   },
 ];
 
+const DYNAMIC_INVOICES = new Map<string, DemoInvoice>();
+
+export function registerDynamicInvoice(inv: DemoInvoice) {
+  DYNAMIC_INVOICES.set(inv.id, inv);
+}
+
 export function getInvoice(id: string): DemoInvoice {
-  const found = DEMO_INVOICES.find((i) => i.id === id);
+  const found = DEMO_INVOICES.find((i) => i.id === id) || DYNAMIC_INVOICES.get(id);
   if (!found) throw new Error(`Unknown demo invoice: ${id}`);
   return found;
 }

@@ -21,7 +21,8 @@ import { HomePage } from "./components/HomePage";
 import { FeaturesPage } from "./components/FeaturesPage";
 import { PricingPage } from "./components/PricingPage";
 import { ContactPage } from "./components/ContactPage";
-import { DEMO_INVOICES, getInvoice } from "./data/fixtures";
+import { DEMO_INVOICES, getInvoice, registerDynamicInvoice } from "./data/fixtures";
+import { parseRawInvoice } from "./lib/parser";
 import { PPN_RATE, PPH22_RATE } from "./data/constants";
 import { FX, refreshFx, subscribeFx } from "./lib/fx";
 import { buildDeclaration, computeLine } from "./lib/engine";
@@ -266,13 +267,12 @@ export default function App() {
   const handleUpload = useCallback(
     (f: UploadedFile) => {
       setUploaded(f);
-      const text = `${f.name} ${f.extractedText || ""}`.toLowerCase();
-      const hit = Object.keys(KEYWORD_FIXTURE).find((k) => text.includes(k));
-      const target = hit ? KEYWORD_FIXTURE[hit]! : "nx";
-
       const isJohor = f.name.toLowerCase().includes("johor");
 
       if (isJohor) {
+        const text = `${f.name} ${f.extractedText || ""}`.toLowerCase();
+        const hit = Object.keys(KEYWORD_FIXTURE).find((k) => text.includes(k));
+        const target = hit ? KEYWORD_FIXTURE[hit]! : "jis";
         if (target !== invoiceId) pickInvoice(target);
         pushToast({
           tone: "brand",
@@ -285,9 +285,23 @@ export default function App() {
       if (analyzingFileRef.current === f.name) return;
       analyzingFileRef.current = f.name;
 
+      // Extract & Classify from Document Text Layer
+      let targetId = "nx";
+      if (f.extractedText && f.extractedText.trim().length > 20) {
+        const parsed = parseRawInvoice(f.extractedText, f.name);
+        if (parsed && parsed.lines.length > 0) {
+          registerDynamicInvoice(parsed);
+          targetId = parsed.id;
+        }
+      } else {
+        const text = `${f.name} ${f.extractedText || ""}`.toLowerCase();
+        const hit = Object.keys(KEYWORD_FIXTURE).find((k) => text.includes(k));
+        targetId = hit ? KEYWORD_FIXTURE[hit]! : "nx";
+      }
+
       clearTimers();
-      const next = getInvoice(target);
-      setInvoiceId(target);
+      const next = getInvoice(targetId);
+      setInvoiceId(targetId);
       setOverrides({});
       setSelectedMap(selectAllOf(next.lines.map((l) => l.id)));
       setActiveId(null);
@@ -296,10 +310,10 @@ export default function App() {
       pushToast({
         tone: "brand",
         title: `Document ingested: ${f.name}`,
-        detail: `⚡ PortSync Vision Agent (Gemini 2.5 Flash): Digitizing line items & matching BTKI 2026 tariff lines...`,
+        detail: `⚡ PortSync Vision Agent: Digitizing line items & studying BTKI tariff taxability under PP 41/2021...`,
       });
 
-      triggerAnalysis(target, f.name);
+      triggerAnalysis(targetId, f.name);
 
       if (window.innerWidth < 1024) {
         setMobileView("declaration");
