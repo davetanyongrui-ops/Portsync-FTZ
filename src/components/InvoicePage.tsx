@@ -16,7 +16,7 @@ const ZOOMS = [0.62, 0.78, 1, 1.25];
 const COLS = "24px 1fr 30px 58px 30px 66px 82px";
 
 const zoomBtn =
-  "grid size-7 place-items-center rounded-md border border-zinc-700 bg-zinc-800 text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white disabled:opacity-30 disabled:hover:bg-zinc-800 disabled:hover:text-zinc-300";
+  "grid size-7 place-items-center rounded-md border border-slate-300 bg-white text-slate-700 shadow-2xs transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-white cursor-pointer";
 
 export function InvoicePage({
   invoice,
@@ -53,11 +53,11 @@ export function InvoicePage({
   const isRaster = invoice.kind === "PNG";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-xs">
-      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-zinc-800 px-3 bg-zinc-950/60">
-        <ScanLine size={14} className="shrink-0 text-cyan-400" />
-        <span className="truncate text-[12.5px] font-medium text-zinc-200">{invoice.fileName}</span>
-        <span className="tnum hidden shrink-0 text-[11px] text-zinc-400 sm:inline">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/60">
+      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-slate-200 px-3 bg-white text-slate-800 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200">
+        <ScanLine size={14} className="shrink-0 text-blue-600 dark:text-cyan-400" />
+        <span className="truncate text-[12.5px] font-medium text-slate-900 dark:text-zinc-200">{invoice.fileName}</span>
+        <span className="tnum hidden shrink-0 text-[11px] text-slate-500 sm:inline dark:text-zinc-400">
           {invoice.pages} pg · {invoice.sizeKb} kB · {isRaster ? "300 dpi raster" : "text layer"}
         </span>
 
@@ -71,7 +71,7 @@ export function InvoicePage({
           >
             <Minus size={13} />
           </button>
-          <span className="tnum w-11 text-center text-[11.5px] text-zinc-400">{Math.round(zoom * 100)}%</span>
+          <span className="tnum w-11 text-center text-[11.5px] text-slate-600 dark:text-zinc-400">{Math.round(zoom * 100)}%</span>
           <button
             type="button"
             onClick={() => setZoomIdx((i) => Math.min(ZOOMS.length - 1, i + 1))}
@@ -94,7 +94,7 @@ export function InvoicePage({
 
       <div
         ref={viewRef}
-        className="scroll-thin dotgrid relative min-h-0 flex-1 overflow-auto bg-zinc-950/90 p-5"
+        className="scroll-thin dotgrid relative min-h-0 flex-1 overflow-auto bg-slate-100/70 p-5 dark:bg-zinc-950/90"
         onClick={() => onActive(null)}
       >
         <div

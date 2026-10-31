@@ -127,24 +127,24 @@ export function PayloadModal({
         aria-modal="true"
         aria-label="PPFTZ-01 declaration payload"
         onClick={(e) => e.stopPropagation()}
-        className="animate-pop flex h-full max-h-[min(820px,92vh)] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-[0_40px_120px_-32px_rgba(0,0,0,0.8)]"
+        className="animate-pop flex h-full max-h-[min(820px,92vh)] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_40px_120px_-32px_rgba(0,0,0,0.8)]"
       >
-        <div className="flex items-start gap-4 border-b border-zinc-800 bg-zinc-950/80 px-5 py-4">
-          <div className="grid size-10 shrink-0 place-items-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+        <div className="flex items-start gap-4 border-b border-slate-200 bg-slate-50/90 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-950/80">
+          <div className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400">
             <Braces size={18} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h3 className="text-[14px] font-semibold tracking-tight text-zinc-100">
+              <h3 className="text-[14px] font-semibold tracking-tight text-slate-900 dark:text-zinc-100">
                 PPFTZ-01 Declaration Payload — validated
               </h3>
               <Pill tone={STATUS_TONE[payload.status]}>{payload.status}</Pill>
             </div>
-            <div className="tnum mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-zinc-400">
-              <span className="font-mono text-zinc-300">schema PPFTZ-01/4.2</span>
-              <span className="font-mono text-zinc-400">idempotency {payload.key}</span>
-              <span className="text-emerald-400">saving {payload.savedLabel}</span>
-              <span className={payload.payableLabel === "Rp 0" ? "text-emerald-400" : "text-amber-400"}>
+            <div className="tnum mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-slate-500 dark:text-zinc-400">
+              <span className="font-mono text-slate-700 dark:text-zinc-300">schema PPFTZ-01/4.2</span>
+              <span className="font-mono text-slate-500 dark:text-zinc-400">idempotency {payload.key}</span>
+              <span className="font-medium text-emerald-700 dark:text-emerald-400">saving {payload.savedLabel}</span>
+              <span className={payload.payableLabel === "Rp 0" ? "font-medium text-emerald-700 dark:text-emerald-400" : "font-medium text-amber-700 dark:text-amber-400"}>
                 payable {payload.payableLabel}
               </span>
               <span>
@@ -155,14 +155,14 @@ export function PayloadModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-8 shrink-0 place-items-center rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white cursor-pointer"
+            className="grid size-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-white cursor-pointer"
             aria-label="Close payload"
           >
             <X size={14} />
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 border-b border-zinc-800 bg-zinc-950/50 px-4 py-2">
+        <div className="flex shrink-0 items-center gap-1.5 border-b border-slate-200 bg-slate-100/70 px-4 py-2 dark:border-zinc-800 dark:bg-zinc-950/50">
           {(
             [
               ["json", "JSON Payload", Braces],
@@ -177,55 +177,57 @@ export function PayloadModal({
               onClick={() => setTab(k)}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors cursor-pointer",
-                tab === k ? "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700" : "text-zinc-400 hover:text-zinc-200",
+                tab === k
+                  ? "bg-white text-slate-900 shadow-xs ring-1 ring-slate-300 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
+                  : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
               )}
             >
-              <Icon size={13} className={tab === k ? "text-cyan-400" : ""} />
+              <Icon size={13} className={tab === k ? "text-blue-600 dark:text-cyan-400" : ""} />
               {label}
             </button>
           ))}
-          <div className="tnum ml-auto text-[11.5px] text-zinc-400 font-mono">
+          <div className="tnum ml-auto text-[11.5px] text-slate-500 font-mono dark:text-zinc-400">
             {lineCount.toLocaleString("en-US")} lines · {(bytes / 1024).toFixed(1)} KB · UTF-8
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col p-4 bg-zinc-900/50">
+        <div className="flex min-h-0 flex-1 flex-col p-4 bg-slate-50/60 dark:bg-zinc-900/50">
           {tab === "summary" ? (
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
-              <div className="text-[13px] font-semibold text-zinc-200">Declaration Validation Summary</div>
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto rounded-xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60">
+              <div className="text-[13px] font-semibold text-slate-900 dark:text-zinc-200">Declaration Validation Summary</div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Status</div>
-                  <div className="mt-1 text-[13px] font-semibold text-zinc-100">{payload.status.replace(/_/g, " ")}</div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/80">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-zinc-400">Status</div>
+                  <div className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-zinc-100">{payload.status.replace(/_/g, " ")}</div>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Idempotency key</div>
-                  <div className="mt-1 font-mono text-[12px] text-cyan-300">{payload.key}</div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/80">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-zinc-400">Idempotency key</div>
+                  <div className="mt-1 font-mono text-[12px] text-blue-700 dark:text-cyan-300">{payload.key}</div>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Schema</div>
-                  <div className="mt-1 font-mono text-[12px] text-zinc-300">PPFTZ-01/4.2</div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/80">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-zinc-400">Schema</div>
+                  <div className="mt-1 font-mono text-[12px] text-slate-700 dark:text-zinc-300">PPFTZ-01/4.2</div>
                 </div>
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-emerald-400">FTZ savings</div>
-                  <div className="mt-1 text-[13px] font-bold text-emerald-300">{payload.savedLabel}</div>
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-50 p-3 dark:bg-emerald-500/10">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">FTZ savings</div>
+                  <div className="mt-1 text-[13px] font-bold text-emerald-800 dark:text-emerald-300">{payload.savedLabel}</div>
                 </div>
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-amber-400">Payable after facility</div>
-                  <div className="mt-1 text-[13px] font-bold text-amber-300">{payload.payableLabel}</div>
+                <div className="rounded-lg border border-amber-500/30 bg-amber-50 p-3 dark:bg-amber-500/10">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-amber-700 dark:text-amber-400">Payable after facility</div>
+                  <div className="mt-1 text-[13px] font-bold text-amber-800 dark:text-amber-300">{payload.payableLabel}</div>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Findings</div>
-                  <div className="mt-1 text-[13px] font-semibold text-zinc-200">{payload.blocking} blocking · {payload.warnings} warnings</div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/80">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-zinc-400">Findings</div>
+                  <div className="mt-1 text-[13px] font-semibold text-slate-900 dark:text-zinc-200">{payload.blocking} blocking · {payload.warnings} warnings</div>
                 </div>
               </div>
-              <p className="text-[11.5px] leading-relaxed text-zinc-400 mt-2">
+              <p className="text-[11.5px] leading-relaxed text-slate-600 dark:text-zinc-400 mt-2">
                 Lines filed are compiled into both JSON and CEISA XML formats. Ready for inspection and direct export to the Bea Cukai Batam sandbox gateway.
               </p>
             </div>
           ) : tab === "clearance" ? (
-            <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-6">
-              <div className="text-[13px] font-semibold tracking-tight text-zinc-200">Simulated Customs Clearance Status</div>
+            <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 rounded-xl border border-slate-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950/60">
+              <div className="text-[13px] font-semibold tracking-tight text-slate-900 dark:text-zinc-200">Simulated Customs Clearance Status</div>
               <ol className="mt-2 space-y-3">
                 {[
                   { n: 1, label: "Validation Passed · Schema PPFTZ-01 Check", done: clearanceStep >= 1 },
@@ -236,19 +238,19 @@ export function PayloadModal({
                     <span
                       className={
                         s.done
-                          ? "grid size-7 place-items-center rounded-full border border-emerald-500/40 bg-emerald-500/20 text-emerald-400 font-bold"
-                          : "grid size-7 place-items-center rounded-full border border-zinc-800 bg-zinc-900 text-zinc-500"
+                          ? "grid size-7 place-items-center rounded-full border border-emerald-500/40 bg-emerald-100 font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400"
+                          : "grid size-7 place-items-center rounded-full border border-slate-200 bg-slate-100 text-slate-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500"
                       }
                     >
                       {s.done ? "✓" : s.n}
                     </span>
-                    <span className={s.done ? "font-medium text-emerald-300" : "text-zinc-500"}>{`${s.n}. ${s.label}`}</span>
+                    <span className={s.done ? "font-medium text-emerald-800 dark:text-emerald-300" : "text-slate-500 dark:text-zinc-500"}>{`${s.n}. ${s.label}`}</span>
                   </li>
                 ))}
               </ol>
               {clearanceStep >= 3 && (
-                <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-[12px] font-medium text-emerald-300 shadow-sm flex items-center gap-2">
-                  <ShieldCheck size={16} className="text-emerald-400" />
+                <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-50 px-3.5 py-2.5 text-[12px] font-medium text-emerald-800 shadow-sm flex items-center gap-2 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400" />
                   Electronic Endorsement Approved — Green Line (Hijau). Ready for physical port exit without red-channel inspection.
                 </div>
               )}
@@ -258,13 +260,13 @@ export function PayloadModal({
           ) : (
             <CodeBlock text={payload.json} kind="json" />
           )}
-          <p className="mt-3 shrink-0 text-[11.5px] leading-relaxed text-zinc-400">
+          <p className="mt-3 shrink-0 text-[11.5px] leading-relaxed text-slate-500 dark:text-zinc-400">
             Generated locally by the PortSync agent against the reference BTKI register. Nothing has been transmitted to
             a customs system — verify live BTKI, INATRADE and kurs pabean values before filing.
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3 border-t border-zinc-800 bg-zinc-950 px-4 py-3.5">
+        <div className="flex shrink-0 items-center gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-950">
           <Btn
             variant="secondary"
             size="sm"

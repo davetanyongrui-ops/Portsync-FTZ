@@ -24,28 +24,28 @@ function Card({
 }) {
   const ring =
     tone === "good"
-      ? "border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_24px_-12px_rgba(16,185,129,0.3)]"
+      ? "border-emerald-300 bg-emerald-50/80 shadow-2xs dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:shadow-[0_0_24px_-12px_rgba(16,185,129,0.3)]"
       : tone === "warn"
-        ? "border-amber-500/30 bg-amber-500/10"
-        : "border-zinc-800 bg-zinc-900/60 shadow-xs";
+        ? "border-amber-300 bg-amber-50/80 shadow-2xs dark:border-amber-500/30 dark:bg-amber-500/10"
+        : "border-slate-200 bg-white shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/60";
 
   return (
     <div data-kpi={label} className={cn("flex flex-col rounded-xl border p-3", ring, className)}>
-      <div className="flex items-center gap-2 text-zinc-400">
+      <div className="flex items-center gap-2 text-slate-500 dark:text-zinc-400">
         {icon}
-        <Label className="min-w-0 truncate text-zinc-300">{label}</Label>
+        <Label className="min-w-0 truncate text-slate-700 dark:text-zinc-300">{label}</Label>
       </div>
       <div
         data-kpi-value
         className={cn(
-          "tnum mt-2 text-xl leading-none font-semibold tracking-tight",
-          tone === "good" ? "text-emerald-400" : tone === "warn" ? "text-amber-400" : "text-zinc-100",
+          "tnum mt-2 text-xl leading-none font-bold tracking-tight",
+          tone === "good" ? "text-emerald-700 dark:text-emerald-400" : tone === "warn" ? "text-amber-700 dark:text-amber-400" : "text-slate-900 dark:text-zinc-100",
         )}
       >
         {value}
       </div>
-      <div className="mt-2 text-[12px] leading-[1.5] text-zinc-300">{sub}</div>
-      {footnote && <div className="mt-2 border-t border-zinc-800/80 pt-2 text-[11.5px] text-zinc-400">{footnote}</div>}
+      <div className="mt-2 text-[12px] leading-[1.5] text-slate-700 dark:text-zinc-300">{sub}</div>
+      {footnote && <div className="mt-2 border-t border-slate-200 pt-2 text-[11.5px] text-slate-500 dark:border-zinc-800/80 dark:text-zinc-400">{footnote}</div>}
     </div>
   );
 }

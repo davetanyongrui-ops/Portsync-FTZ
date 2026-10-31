@@ -72,10 +72,10 @@ export function LeftPanel({
   const [showDiscrepancy, setShowDiscrepancy] = useState(true);
 
   return (
-    <section className="scroll-thin flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden bg-[#09090b] p-3.5 lg:p-4">
+    <section className="scroll-thin flex h-full min-h-0 w-full flex-col gap-3 overflow-y-auto overflow-x-hidden bg-slate-50/80 p-3.5 text-slate-800 lg:p-4 dark:bg-[#09090b] dark:text-zinc-100">
       <div className="flex shrink-0 items-center gap-2.5">
-        <FileSearch size={16} className="shrink-0 text-cyan-400" />
-        <h2 className="truncate text-[13.5px] font-semibold tracking-tight text-zinc-100">
+        <FileSearch size={16} className="shrink-0 text-blue-600 dark:text-cyan-400" />
+        <h2 className="truncate text-[13.5px] font-semibold tracking-tight text-slate-900 dark:text-zinc-100">
           Document &amp; Source Inspector
         </h2>
         <div className="ml-auto shrink-0">
@@ -91,7 +91,7 @@ export function LeftPanel({
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <Label>Consignment Fixtures</Label>
-            <span className="text-[10.5px] text-zinc-500 font-mono">3 Preloaded Cases</span>
+            <span className="text-[10.5px] text-slate-500 font-mono dark:text-zinc-500">4 Preloaded Cases</span>
           </div>
 
           {/* Quick Select Chips */}
@@ -104,14 +104,14 @@ export function LeftPanel({
                   type="button"
                   onClick={() => onPick(chip.id)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-1 px-2 text-center transition-all cursor-pointer",
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-1 px-2 text-center transition-all cursor-pointer shadow-2xs",
                     active
-                      ? "border-cyan-500/60 bg-cyan-500/10 ring-1 ring-cyan-500/30"
-                      : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700",
+                      ? "border-blue-500/60 bg-blue-50 text-blue-900 ring-1 ring-blue-500/30 dark:border-cyan-500/60 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/30"
+                      : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 dark:hover:border-zinc-700",
                   )}
                 >
                   <span className="text-xs">{chip.flag}</span>
-                  <span className={cn("text-[11px] font-medium truncate", active ? "text-cyan-300 font-semibold" : "text-zinc-400")}>
+                  <span className={cn("text-[11px] font-medium truncate", active ? "font-bold text-blue-900 dark:text-cyan-300" : "")}>
                     {chip.short}
                   </span>
                 </button>
@@ -124,7 +124,7 @@ export function LeftPanel({
               id="demo-invoice"
               value={invoiceId}
               onChange={(e) => onPick(e.target.value)}
-              className="h-9 w-full cursor-pointer appearance-none rounded-lg border border-zinc-700 bg-zinc-900 px-3 pr-9 text-[12.5px] text-zinc-200 transition-colors hover:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              className="h-9 w-full cursor-pointer appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-9 text-[12.5px] text-slate-800 shadow-2xs transition-colors hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:ring-cyan-500"
               aria-label="Select a preloaded demo invoice"
             >
               {DEMO_INVOICES.map((inv) => (
@@ -133,30 +133,30 @@ export function LeftPanel({
                 </option>
               ))}
             </select>
-            <ChevronDown size={14} className="pointer-events-none absolute top-2.5 right-3 text-zinc-500" />
+            <ChevronDown size={14} className="pointer-events-none absolute top-2.5 right-3 text-slate-400 dark:text-zinc-500" />
           </div>
 
-          <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-900/50 p-2.5">
+          <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/50">
             <div className="flex items-start justify-between gap-2.5">
               <div className="min-w-0">
-                <div className="truncate text-[12.5px] font-semibold text-zinc-100">{invoice.supplier.name}</div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-zinc-400">
+                <div className="truncate text-[12.5px] font-semibold text-slate-900 dark:text-zinc-100">{invoice.supplier.name}</div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
                   {invoice.consignee.name}
-                  <ArrowRight size={11} className="text-zinc-600" />
-                  <span className="text-zinc-400">KPBPB Batam</span>
+                  <ArrowRight size={11} className="text-slate-400 dark:text-zinc-600" />
+                  <span className="text-slate-600 dark:text-zinc-400">KPBPB Batam</span>
                 </div>
               </div>
               <Pill tone="brand" className="shrink-0 text-[10.5px]">
                 {invoice.currency}
               </Pill>
             </div>
-            <div className="tnum mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-zinc-800 pt-1.5 text-[11px] text-zinc-400">
-              <span className="text-zinc-300 font-mono">{invoice.docNo}</span>
-              <span className="text-zinc-600">·</span>
+            <div className="tnum mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-slate-100 pt-1.5 text-[11px] text-slate-500 dark:border-zinc-800 dark:text-zinc-400">
+              <span className="text-slate-700 font-mono dark:text-zinc-300">{invoice.docNo}</span>
+              <span className="text-slate-300 dark:text-zinc-600">·</span>
               <span>{fmtDate(invoice.docDate)}</span>
-              <span className="text-zinc-600">·</span>
-              <span className="text-emerald-400">ETA {fmtDate(invoice.freight.eta)}</span>
-              <span className="text-zinc-600">·</span>
+              <span className="text-slate-300 dark:text-zinc-600">·</span>
+              <span className="text-emerald-700 font-medium dark:text-emerald-400">ETA {fmtDate(invoice.freight.eta)}</span>
+              <span className="text-slate-300 dark:text-zinc-600">·</span>
               <span>{invoice.lines.length} items</span>
             </div>
           </div>
@@ -179,7 +179,7 @@ export function LeftPanel({
               <span>
                 <b className="font-semibold text-white">{uploaded.name}</b> digitized via{" "}
                 <b className="font-semibold text-cyan-300">PortSync Multimodal Vision Agent (Google Gemini 2.5 Flash)</b>.
-                Extracted 5 line items from Batu Ampar manifest with real-time BTKI 2026 tariff mapping and PP 41/2021 exemption modeling.
+                Extracted {invoice.lines.length} line items with real-time BTKI 2026 tariff mapping and PP 41/2021 exemption modeling.
               </span>
             </div>
           )
@@ -224,84 +224,84 @@ export function LeftPanel({
       />
 
       {/* 3-Way Document Audit Visualizer */}
-      <div className="shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-2xs">
+      <div className="shrink-0 rounded-xl border border-slate-200 bg-white shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/60">
         <button
           type="button"
           onClick={() => setAuditOpen((v) => !v)}
-          className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left hover:bg-zinc-800/30 transition-colors cursor-pointer"
+          className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left hover:bg-slate-50 transition-colors cursor-pointer dark:hover:bg-zinc-800/30"
           aria-expanded={auditOpen}
         >
-          <ShieldCheck size={14} className="shrink-0 text-cyan-400" />
-          <span className="text-[12.5px] font-semibold tracking-tight text-zinc-200">
+          <ShieldCheck size={14} className="shrink-0 text-blue-600 dark:text-cyan-400" />
+          <span className="text-[12.5px] font-semibold tracking-tight text-slate-800 dark:text-zinc-200">
             3-Way Document Audit (Invoice vs P/L vs B/L)
           </span>
-          <span className="ml-auto text-zinc-500">
+          <span className="ml-auto text-slate-400 dark:text-zinc-500">
             {auditOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
         </button>
         {auditOpen && (
-          <div className="space-y-3 border-t border-zinc-800 px-3.5 py-3 bg-zinc-950/40">
-            <div className="overflow-hidden rounded-lg border border-zinc-800">
-              <div className="grid grid-cols-5 bg-zinc-900 px-2.5 py-2 text-[11px] font-semibold text-zinc-400">
+          <div className="space-y-3 border-t border-slate-200 px-3.5 py-3 bg-slate-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+            <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-zinc-800">
+              <div className="grid grid-cols-5 bg-slate-100 px-2.5 py-2 text-[11px] font-semibold text-slate-700 dark:bg-zinc-900 dark:text-zinc-400">
                 <div>Check</div>
                 <div>Commercial Invoice</div>
                 <div>Packing List</div>
                 <div>Bill of Lading</div>
                 <div>Result</div>
               </div>
-              <div className="divide-y divide-zinc-800/80 text-[11.5px] text-zinc-300">
+              <div className="divide-y divide-slate-100 text-[11.5px] text-slate-700 dark:divide-zinc-800/80 dark:text-zinc-300">
                 <div className="grid grid-cols-5 px-2.5 py-2 items-center">
-                  <div className="font-medium text-zinc-200">Gross Weight Match</div>
+                  <div className="font-medium text-slate-900 dark:text-zinc-200">Gross Weight Match</div>
                   <div>1,420 kg</div>
                   <div>1,420 kg</div>
                   <div>1,420 kg</div>
                   <div>
-                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-medium text-emerald-400">
+                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[10.5px] font-bold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400">
                       PASS
                     </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-5 px-2.5 py-2 items-center">
-                  <div className="font-medium text-zinc-200">Declared Currency</div>
+                  <div className="font-medium text-slate-900 dark:text-zinc-200">Declared Currency</div>
                   <div>USD</div>
                   <div>USD</div>
                   <div>USD</div>
                   <div>
-                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-medium text-emerald-400">
+                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[10.5px] font-bold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400">
                       PASS
                     </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-5 px-2.5 py-2 items-center">
-                  <div className="font-medium text-zinc-200">NPWP / NIB Valid</div>
+                  <div className="font-medium text-slate-900 dark:text-zinc-200">NPWP / NIB Valid</div>
                   <div>Active (OSS)</div>
                   <div>Active (OSS)</div>
                   <div>Active (OSS)</div>
                   <div>
-                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-medium text-emerald-400">
+                    <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[10.5px] font-bold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400">
                       VERIFIED
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between gap-3 text-[11.5px] text-zinc-400">
+            <div className="flex items-center justify-between gap-3 text-[11.5px] text-slate-500 dark:text-zinc-400">
               <span>Simulate B/L discrepancy check</span>
               <button
                 type="button"
                 onClick={() => setShowDiscrepancy((v) => !v)}
                 className={
                   showDiscrepancy
-                    ? "rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300 font-medium cursor-pointer"
-                    : "rounded-md border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-zinc-400 cursor-pointer"
+                    ? "rounded-md border border-amber-500/30 bg-amber-50 px-2.5 py-1 text-amber-800 font-semibold cursor-pointer dark:bg-amber-500/10 dark:text-amber-300"
+                    : "rounded-md border border-slate-300 bg-slate-100 px-2.5 py-1 text-slate-600 cursor-pointer dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
                 }
               >
                 {showDiscrepancy ? "Active (Simulated)" : "Off"}
               </button>
             </div>
             {showDiscrepancy && (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-[11.5px] leading-relaxed text-amber-300">
-                <b className="text-amber-200">Audit Alert:</b> B/L item count (15 crates) exceeds Invoice total (12 crates) — Flagged for review before CEISA filing.
+              <div className="rounded-lg border border-amber-500/30 bg-amber-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                <b className="text-amber-900 dark:text-amber-200">Audit Alert:</b> B/L item count (15 crates) exceeds Invoice total (12 crates) — Flagged for review before CEISA filing.
               </div>
             )}
           </div>
@@ -325,13 +325,13 @@ export function LeftPanel({
               : "Analyze & Map to BTKI Tariff"}
         </Btn>
 
-        <div className="flex items-center justify-between gap-3 text-[11.5px] text-zinc-400">
+        <div className="flex items-center justify-between gap-3 text-[11.5px] text-slate-500 dark:text-zinc-400">
           <span>Reference BTKI register · deterministic, zero-latency</span>
           {analyzed && (
             <button
               type="button"
               onClick={onReset}
-              className="inline-flex shrink-0 items-center gap-1.5 text-zinc-400 transition-colors hover:text-zinc-100 cursor-pointer"
+              className="inline-flex shrink-0 items-center gap-1.5 text-slate-500 transition-colors hover:text-slate-900 cursor-pointer dark:text-zinc-400 dark:hover:text-zinc-100"
             >
               <RotateCcw size={11} /> Reset overrides
             </button>

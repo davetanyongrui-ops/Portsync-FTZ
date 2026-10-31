@@ -13,7 +13,7 @@ const RISK_EDGE: Record<string, string> = {
 };
 
 const TH =
-  "sticky top-0 z-10 bg-zinc-900 px-4 py-3 text-left text-xs font-semibold tracking-wider whitespace-nowrap text-zinc-400 uppercase border-b border-zinc-800";
+  "sticky top-0 z-10 bg-slate-100 px-4 py-3 text-left text-xs font-semibold tracking-wider whitespace-nowrap text-slate-700 uppercase border-b border-slate-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800";
 const TD = "relative px-4 py-3.5";
 
 const COLS = ["w-[44px]", "w-[22%]", "w-[25%]", "w-[11%]", "w-[18%]"];
@@ -52,12 +52,12 @@ function Row({
       data-selected={selected ? "true" : "false"}
       onClick={() => onActive(active ? null : c.id)}
       className={cn(
-        "cursor-pointer border-l-2 align-top transition-colors border-b border-zinc-800/60",
+        "cursor-pointer border-l-2 align-top transition-colors border-b border-slate-100 dark:border-zinc-800/60",
         RISK_EDGE[c.risk],
         active
-          ? "bg-cyan-500/10 shadow-[inset_0_0_12px_rgba(6,182,212,0.15)]"
+          ? "bg-blue-50/80 shadow-[inset_0_0_12px_rgba(37,99,235,0.08)] dark:bg-cyan-500/10 dark:shadow-[inset_0_0_12px_rgba(6,182,212,0.15)]"
           : selected
-            ? "hover:bg-zinc-800/40"
+            ? "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
             : "opacity-50 hover:opacity-90",
       )}
     >
@@ -67,19 +67,19 @@ function Row({
 
       <td className={TD}>
         <div className="flex items-start gap-2">
-          <span className="tnum mt-px shrink-0 text-[11px] text-zinc-500">{String(c.pos).padStart(2, "0")}</span>
+          <span className="tnum mt-px shrink-0 text-[11px] text-slate-400 dark:text-zinc-500">{String(c.pos).padStart(2, "0")}</span>
           <div className="min-w-0 max-w-[200px]">
-            <div title={c.line.raw} className="line-clamp-2 text-[13px] leading-snug text-zinc-100">
+            <div title={c.line.raw} className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-900 dark:text-zinc-100">
               {c.line.raw}
             </div>
-            <div className="mt-1.5 text-[11.5px] leading-[1.5] text-zinc-400">
-              <span className="font-mono text-zinc-300">{c.line.supplierRef}</span> · {c.line.origin} ·{" "}
+            <div className="mt-1.5 text-[11.5px] leading-[1.5] text-slate-500 dark:text-zinc-400">
+              <span className="font-mono text-slate-700 dark:text-zinc-300">{c.line.supplierRef}</span> · {c.line.origin} ·{" "}
               <span className="tnum">
                 {fmtQty(c.qty)} {c.uom} · {c.line.netKg} kg
               </span>
               {c.line.ocrNote && (
                 <span
-                  className="ml-1.5 inline-flex items-center gap-1 align-middle text-violet-400"
+                  className="ml-1.5 inline-flex items-center gap-1 align-middle text-violet-600 dark:text-violet-400"
                   title={c.line.ocrNote}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -101,10 +101,10 @@ function Row({
           onChange={(e) => onOverride(c.id, e.target.value)}
           title={c.overridden ? "Broker override — re-mapped by hand" : "Agent's top BTKI match"}
           className={cn(
-            "w-full cursor-pointer appearance-none truncate rounded border bg-zinc-900 px-2 py-1 pr-6 font-mono text-xs transition-colors",
+            "w-full cursor-pointer appearance-none truncate rounded border px-2 py-1 pr-6 font-mono text-xs shadow-2xs transition-colors",
             c.overridden
-              ? "border-amber-500 text-amber-300 hover:border-amber-400"
-              : "border-zinc-700 text-cyan-300 hover:border-zinc-500",
+              ? "border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-500/45 dark:bg-zinc-900 dark:text-amber-300"
+              : "border-slate-300 bg-white text-blue-700 hover:border-slate-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-cyan-400 dark:hover:border-zinc-600",
           )}
           style={{
             backgroundImage:
@@ -124,7 +124,7 @@ function Row({
             className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[confidenceTone(c.confidence)])}
             title={`${Math.round(c.confidence * 100)}% — classifier agreement with the BTKI register`}
           />
-          <span className="truncate text-[11.5px] text-zinc-400" title={c.entry.titleEn}>
+          <span className="truncate text-[11.5px] text-slate-500 dark:text-zinc-400" title={c.entry.titleEn}>
             {c.entry.titleEn}
           </span>
         </div>
@@ -135,37 +135,37 @@ function Row({
         )}
         <div className="tnum mt-2 text-[11.5px] whitespace-nowrap">
           {c.blocked ? (
-            <span className="inline-flex items-center gap-1 text-rose-400">
+            <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400">
               <Lock size={10} /> blocked
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-zinc-400">
-              <span className="size-1.5 rounded-full bg-emerald-400" /> filable
+            <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
+              <span className="size-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> filable
             </span>
           )}
         </div>
       </td>
 
       <td className={cn(TD, "tnum text-right whitespace-nowrap")}>
-        <div className="text-[13px] font-semibold text-zinc-100">{fmtUsd(c.usdCif).replace("$ ", "")}</div>
-        <div className="mt-1 text-[11.5px] text-zinc-400">{fmtIdrShort(c.idrCif)}</div>
-        <div className="mt-1 text-[11px] text-zinc-500">@ {fmtUsd(c.unitCifUsd).replace("$ ", "")} / unit</div>
+        <div className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">{fmtUsd(c.usdCif).replace("$ ", "")}</div>
+        <div className="mt-1 text-[11.5px] text-slate-500 dark:text-zinc-400">{fmtIdrShort(c.idrCif)}</div>
+        <div className="mt-1 text-[11px] text-slate-400 dark:text-zinc-500">@ {fmtUsd(c.unitCifUsd).replace("$ ", "")} / unit</div>
       </td>
 
       <td className={TD}>
-        <div className="tnum text-[11.5px] text-zinc-400">
+        <div className="tnum text-[11.5px] text-slate-500 dark:text-zinc-400">
           Std {Math.round(c.bmRate * 100)}% BM + {Math.round(c.ppnRate * 100)}% PPN
           {c.bmadRate > 0 ? ` + ${Math.round(c.bmadRate * 100)}% BMAD` : ""}
         </div>
         <div className="tnum mt-1.5 flex items-center gap-1.5 text-[12px] font-semibold">
-          <ArrowDownRight size={12} className={c.coverage === 1 ? "text-emerald-400" : "text-amber-400"} />
-          <span className={c.coverage === 1 ? "text-emerald-400" : "text-amber-400"}>
+          <ArrowDownRight size={12} className={c.coverage === 1 ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"} />
+          <span className={c.coverage === 1 ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}>
             FTZ {Math.round(c.bmRate * (1 - c.coverage) * 100)}% + {Math.round(c.ppnRate * (1 - c.coverage) * 100)}%
           </span>
         </div>
         <div className="tnum mt-1.5 flex flex-wrap items-center gap-x-2 text-[11.5px]">
-          <span className="text-emerald-400">saved {fmtIdrShort(c.saved)}</span>
-          {c.payable > 0 && <span className="text-amber-400">due {fmtIdrShort(c.payable)}</span>}
+          <span className="font-medium text-emerald-700 dark:text-emerald-400">saved {fmtIdrShort(c.saved)}</span>
+          {c.payable > 0 && <span className="font-medium text-amber-700 dark:text-amber-400">due {fmtIdrShort(c.payable)}</span>}
         </div>
       </td>
 
@@ -186,10 +186,10 @@ function Row({
               +{hidden}
             </Pill>
           )}
-          {c.badges.length === 0 && <span className="text-[11.5px] text-zinc-500">none</span>}
+          {c.badges.length === 0 && <span className="text-[11.5px] text-slate-400 dark:text-zinc-500">none</span>}
         </div>
-        <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[11.5px] text-zinc-400">
-          <Info size={11} className="shrink-0 text-zinc-500" />
+        <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[11.5px] text-slate-500 dark:text-zinc-400">
+          <Info size={11} className="shrink-0 text-slate-400 dark:text-zinc-500" />
           <span className="truncate">{c.fta.scheme.replace(" — ", "/")}</span>
         </div>
       </td>
@@ -218,14 +218,14 @@ export function DeclarationTable({
 }) {
   if (!ready) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 p-10 text-center">
-        <div className="grid size-11 place-items-center rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-400">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900/40">
+        <div className="grid size-11 place-items-center rounded-xl border border-slate-200 bg-slate-100 text-slate-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
           <ScanLine size={20} />
         </div>
-        <div className="text-[14px] font-medium text-zinc-200">Declaration engine idle</div>
-        <div className="max-w-[380px] text-[12.5px] leading-relaxed text-zinc-400">
+        <div className="text-[14px] font-medium text-slate-900 dark:text-zinc-200">Declaration engine idle</div>
+        <div className="max-w-[380px] text-[12.5px] leading-relaxed text-slate-500 dark:text-zinc-400">
           Stage a document on the left, then run{" "}
-          <b className="font-medium text-zinc-200">Analyze &amp; Map to BTKI Tariff</b>. Classified lines, duty
+          <b className="font-medium text-slate-800 dark:text-zinc-200">Analyze &amp; Map to BTKI Tariff</b>. Classified lines, duty
           comparison and Lartas tags land here.
         </div>
       </div>
@@ -235,7 +235,7 @@ export function DeclarationTable({
   const allSelected = calcs.every((c) => selectedIds.has(c.id));
 
   return (
-    <div className="scroll-thin min-h-0 flex-1 overflow-auto rounded-xl border border-zinc-800 bg-zinc-950/60 shadow-xs">
+    <div className="scroll-thin min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-950/60">
       <table className="w-full min-w-[760px] table-fixed border-collapse">
         <colgroup>
           {COLS.map((w) => (
@@ -257,7 +257,7 @@ export function DeclarationTable({
             <Th>Regulatory tag</Th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-zinc-800/60">
+        <tbody className="divide-y divide-slate-200 dark:divide-zinc-800/60">
           {calcs.map((c) => (
             <Row
               key={c.id}

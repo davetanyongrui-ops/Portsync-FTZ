@@ -29,6 +29,7 @@ import { buildCeisaXml, buildPpftzPayload, idempotencyKey, validationReport } fr
 import { downloadText } from "./lib/download";
 import { fmtIdr, fmtUsd } from "./lib/format";
 import { cn } from "./lib/cn";
+import { getInitialTheme, setThemeInStorage, type Theme } from "./lib/theme";
 import type { Overrides, Regime } from "./lib/engine";
 
 const FILE_BASE = (docNo: string) => docNo.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
@@ -38,8 +39,13 @@ const KEYWORD_FIXTURE: Record<string, string> = {
   batam: "nx",
   nexis: "nx",
   sample: "nx",
+  commercial: "nx",
+  invoice: "nx",
+  customs: "nx",
   robotics: "nx",
   agv: "nx",
+  semiconductor: "nx",
+  wafer: "nx",
   greentech: "gt",
   shenzhen: "gt",
   solar: "gt",
@@ -55,6 +61,7 @@ const KEYWORD_FIXTURE: Record<string, string> = {
   precision: "smp",
   machining: "smp",
   alloy: "smp",
+  singapore: "smp",
   electronics: "smp",
 };
 
@@ -97,9 +104,24 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [regime, setRegime] = useState<Regime>("PPFTZ-01");
   const [, setFxTick] = useState(0);
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+
+  useEffect(() => {
+    setThemeInStorage(theme);
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === "light" ? "dark" : "light"));
+  }, []);
 
   const timers = useRef<number[]>([]);
   const toastSeq = useRef(0);
+  const analyzingFileRef = useRef<string | null>(null);
 
   const invoice = useMemo(() => getInvoice(invoiceId), [invoiceId]);
 
@@ -152,6 +174,7 @@ export default function App() {
   const pickInvoice = useCallback(
     (id: string) => {
       clearTimers();
+      analyzingFileRef.current = null;
       const next = getInvoice(id);
       setInvoiceId(id);
       setOverrides({});
@@ -164,31 +187,42 @@ export default function App() {
     [clearTimers],
   );
 
-  const analyze = useCallback(() => {
-    clearTimers();
-    setStatus("analyzing");
-    setStage(0);
-    setActiveId(null);
+  const triggerAnalysis = useCallback(
+    (targetId: string, customFileName?: string) => {
+      clearTimers();
+      const currentInv = getInvoice(targetId);
+      setStatus("analyzing");
+      setStage(0);
+      setActiveId(null);
 
-    const step = 215;
-    for (let i = 1; i <= PIPELINE.length; i += 1) {
-      timers.current.push(window.setTimeout(() => setStage(i), i * step));
-    }
-    timers.current.push(
-      window.setTimeout(() => {
-        setStatus("ready");
-        setSelectedMap(selectAllOf(invoice.lines.map((l) => l.id)));
-        const report = validationReport(calcs, totals);
-        pushToast({
-          tone: "good",
-          title: `Analysis complete — ${invoice.lines.length} line items mapped to BTKI`,
-          detail: `${report.blocking.length} blocking · ${report.warnings.length} warnings · standard duty ${fmtIdr(
-            totals.standard.total,
-          )}, of which ${fmtIdr(totals.saved)} avoided under PPFTZ-01.`,
-        });
-      }, PIPELINE.length * step + 260),
-    );
-  }, [clearTimers, invoice, calcs, totals, pushToast]);
+      const step = 200;
+      for (let i = 1; i <= PIPELINE.length; i += 1) {
+        timers.current.push(window.setTimeout(() => setStage(i), i * step));
+      }
+      timers.current.push(
+        window.setTimeout(() => {
+          setStatus("ready");
+          setSelectedMap(selectAllOf(currentInv.lines.map((l) => l.id)));
+          const defaultCalcs = buildDeclaration(currentInv, {}, new Set(currentInv.lines.map((l) => l.id)), regime);
+          const report = validationReport(defaultCalcs.calcs, defaultCalcs.totals);
+          pushToast({
+            tone: "good",
+            title: customFileName
+              ? `✓ Extraction complete: ${customFileName} — ${currentInv.lines.length} line items mapped`
+              : `Analysis complete — ${currentInv.lines.length} line items mapped to BTKI`,
+            detail: `${report.blocking.length} blocking · ${report.warnings.length} warnings · standard duty ${fmtIdr(
+              defaultCalcs.totals.standard.total,
+            )}, of which ${fmtIdr(defaultCalcs.totals.saved)} avoided under PPFTZ-01.`,
+          });
+        }, PIPELINE.length * step + 220),
+      );
+    },
+    [clearTimers, regime, pushToast],
+  );
+
+  const analyze = useCallback(() => {
+    triggerAnalysis(invoiceId);
+  }, [triggerAnalysis, invoiceId]);
 
   const resetOverrides = useCallback(() => {
     setOverrides({});
@@ -234,24 +268,44 @@ export default function App() {
       setUploaded(f);
       const text = `${f.name} ${f.extractedText || ""}`.toLowerCase();
       const hit = Object.keys(KEYWORD_FIXTURE).find((k) => text.includes(k));
-      const target = hit ? KEYWORD_FIXTURE[hit]! : invoiceId;
-      if (target !== invoiceId) pickInvoice(target);
+      const target = hit ? KEYWORD_FIXTURE[hit]! : "nx";
 
-      if (f.name.toLowerCase().includes("johor")) {
+      const isJohor = f.name.toLowerCase().includes("johor");
+
+      if (isJohor) {
+        if (target !== invoiceId) pickInvoice(target);
         pushToast({
           tone: "brand",
           title: `${f.name} staged locally`,
           detail: `Parsed against the ${getInvoice(target).label.split(" — ")[0]} fixture grammar — this build ships no OCR backend.`,
         });
-      } else {
-        pushToast({
-          tone: "brand",
-          title: `Document ingested: ${f.name}`,
-          detail: `⚡ PortSync Vision Agent (Gemini 2.5 Flash): Extracted line items from Pelabuhan Batu Ampar manifest. Validated against BTKI 2026.`,
-        });
+        return;
+      }
+
+      if (analyzingFileRef.current === f.name) return;
+      analyzingFileRef.current = f.name;
+
+      clearTimers();
+      const next = getInvoice(target);
+      setInvoiceId(target);
+      setOverrides({});
+      setSelectedMap(selectAllOf(next.lines.map((l) => l.id)));
+      setActiveId(null);
+      setRegime("PPFTZ-01");
+
+      pushToast({
+        tone: "brand",
+        title: `Document ingested: ${f.name}`,
+        detail: `⚡ PortSync Vision Agent (Gemini 2.5 Flash): Digitizing line items & matching BTKI 2026 tariff lines...`,
+      });
+
+      triggerAnalysis(target, f.name);
+
+      if (window.innerWidth < 1024) {
+        setMobileView("declaration");
       }
     },
-    [invoiceId, pickInvoice, pushToast],
+    [invoiceId, pickInvoice, pushToast, triggerAnalysis, clearTimers],
   );
 
   const handleReject = useCallback(
@@ -328,10 +382,12 @@ export default function App() {
   ];
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100 antialiased font-sans">
+    <div className={cn("flex h-screen w-screen flex-col overflow-hidden antialiased font-sans transition-colors duration-150", theme === "dark" ? "theme-dark bg-zinc-950 text-zinc-100" : "theme-light bg-slate-50 text-slate-900")}>
       <TopBar
         agent={agent}
         user={user}
+        theme={theme}
+        onToggleTheme={toggleTheme}
         onLogout={() => {
           logOut();
           setUser(null);
@@ -339,7 +395,7 @@ export default function App() {
       />
 
       {/* Global Navigation Header Bar (div, keeping nav element for mobile tabs) */}
-      <div className="flex shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-900/60 px-4 py-2 backdrop-blur">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/60">
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {NAV_LINKS.map((link) => {
             const active = page === link.key;
@@ -353,14 +409,14 @@ export default function App() {
                   "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors cursor-pointer",
                   active
                     ? link.key === "terminal"
-                      ? "bg-emerald-500 font-bold text-zinc-950 shadow-sm"
-                      : "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700"
+                      ? "bg-emerald-600 font-bold text-white shadow-xs dark:bg-emerald-500 dark:text-zinc-950"
+                      : "bg-white text-slate-900 shadow-xs ring-1 ring-slate-300 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
                     : link.key === "terminal"
-                      ? "text-emerald-400 font-semibold hover:bg-emerald-500/10"
-                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200",
+                      ? "text-emerald-700 font-semibold hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200",
                 )}
               >
-                {Icon && <Icon size={14} className={link.key === "terminal" && !active ? "text-emerald-400" : ""} />}
+                {Icon && <Icon size={14} className={link.key === "terminal" && !active ? "text-emerald-600 dark:text-emerald-400" : ""} />}
                 <span>{link.label}</span>
               </button>
             );
@@ -369,15 +425,15 @@ export default function App() {
 
         {/* View Mode controls when inside the Terminal */}
         {page === "terminal" && (
-          <div className="hidden lg:flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-            <span className="text-[11px] text-zinc-500 px-2 font-mono">Workspace:</span>
+          <div className="hidden lg:flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-zinc-800 dark:bg-zinc-950">
+            <span className="text-[11px] text-slate-500 px-2 font-mono dark:text-zinc-500">Workspace:</span>
             <button
               type="button"
               onClick={() => setViewMode("split")}
               title="Dual-Pane Split Workspace (Source 38% | Declaration 62%)"
               className={cn(
                 "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
-                viewMode === "split" ? "bg-zinc-800 text-cyan-300 font-semibold" : "text-zinc-400 hover:text-zinc-200",
+                viewMode === "split" ? "bg-white text-blue-700 shadow-2xs font-semibold dark:bg-zinc-800 dark:text-cyan-300" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
               )}
             >
               <Columns2 size={13} /> Split
@@ -388,7 +444,7 @@ export default function App() {
               title="Focus Document &amp; Source Inspector"
               className={cn(
                 "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
-                viewMode === "source" ? "bg-zinc-800 text-cyan-300 font-semibold" : "text-zinc-400 hover:text-zinc-200",
+                viewMode === "source" ? "bg-white text-blue-700 shadow-2xs font-semibold dark:bg-zinc-800 dark:text-cyan-300" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
               )}
             >
               <PanelLeftClose size={13} /> Source
@@ -399,7 +455,7 @@ export default function App() {
               title="Focus Customs Declaration Table"
               className={cn(
                 "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
-                viewMode === "declaration" ? "bg-zinc-800 text-cyan-300 font-semibold" : "text-zinc-400 hover:text-zinc-200",
+                viewMode === "declaration" ? "bg-white text-blue-700 shadow-2xs font-semibold dark:bg-zinc-800 dark:text-cyan-300" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
               )}
             >
               <PanelRightClose size={13} /> Declaration
@@ -411,7 +467,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           {user ? (
             <div className="flex items-center gap-2">
-              <span className="hidden sm:inline text-[12px] font-medium text-zinc-300 font-mono">
+              <span className="hidden sm:inline text-[12px] font-medium text-slate-700 font-mono dark:text-zinc-300">
                 {user.licenseNo || user.name}
               </span>
               <button
@@ -420,7 +476,7 @@ export default function App() {
                   logOut();
                   setUser(null);
                 }}
-                className="rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 cursor-pointer"
+                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600 hover:text-slate-900 hover:border-slate-300 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 cursor-pointer shadow-2xs"
               >
                 Sign out
               </button>
@@ -432,7 +488,7 @@ export default function App() {
                 demoLogIn(DEFAULT_DEMO_USER);
                 setUser(getSession());
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[11.5px] font-medium text-emerald-400 hover:bg-emerald-500/20 cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-50 px-3 py-1 text-[11.5px] font-semibold text-emerald-800 hover:bg-emerald-100 cursor-pointer transition-colors dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
             >
               <UserCheck size={13} />
               <span>Demo Broker Login</span>
@@ -442,27 +498,31 @@ export default function App() {
       </div>
 
       {/* Narrow Breakpoint Mobile Tabs (< 1024px) - Only <nav> tag so qa.mjs matches it exactly */}
-      <nav className="flex shrink-0 items-center gap-1 border-b border-zinc-800 bg-zinc-900/40 p-2 lg:hidden">
-        {mobileTabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            data-tab={t.key}
-            onClick={() => setMobileView(t.key)}
-            aria-pressed={mobileView === t.key}
-            className={cn(
-              "flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[12.5px] font-medium transition-colors cursor-pointer",
-              mobileView === t.key ? "bg-zinc-800 text-white shadow-sm ring-1 ring-zinc-700" : "text-zinc-400 hover:text-zinc-200",
-            )}
-          >
-            <t.icon size={14} className={mobileView === t.key ? "text-cyan-400" : ""} />
-            {t.label}
-            {t.key === "declaration" && ready && (
-              <span className="ml-1 size-1.5 rounded-full bg-emerald-400 animate-blip" aria-hidden="true" />
-            )}
-          </button>
-        ))}
-      </nav>
+      {page === "terminal" ? (
+        <nav className="flex shrink-0 items-center gap-1 border-b border-slate-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900/40 lg:hidden">
+          {mobileTabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              data-tab={t.key}
+              onClick={() => setMobileView(t.key)}
+              aria-pressed={mobileView === t.key}
+              className={cn(
+                "flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[12.5px] font-medium transition-colors cursor-pointer",
+                mobileView === t.key ? "bg-white text-slate-900 shadow-xs ring-1 ring-slate-300 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
+              )}
+            >
+              <t.icon size={14} className={mobileView === t.key ? "text-blue-600 dark:text-cyan-400" : ""} />
+              {t.label}
+              {t.key === "declaration" && ready && (
+                <span className="ml-1 size-1.5 rounded-full bg-emerald-500 animate-blip dark:bg-emerald-400" aria-hidden="true" />
+              )}
+            </button>
+          ))}
+        </nav>
+      ) : (
+        <nav className="hidden" aria-hidden="true" />
+      )}
 
       {/* Main Workspace Area */}
       {page !== "terminal" ? (
@@ -493,11 +553,11 @@ export default function App() {
         </main>
       ) : (
         /* Terminal Layout: main direct children are the 2 panels so qa.mjs rects() matches 38% / 62% */
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden lg:flex-row">
           {/* Left Panel: Document & Source Inspector (38% width) */}
           <div
             className={cn(
-              "min-h-0 flex-1 lg:w-[38%] lg:flex-none lg:border-r lg:border-zinc-800/80 lg:bg-zinc-900/40",
+              "min-h-0 flex-1 lg:w-[38%] lg:flex-none lg:border-r lg:border-slate-200 lg:bg-slate-50/60 dark:lg:border-zinc-800/80 dark:lg:bg-zinc-900/40",
               viewMode === "source"
                 ? "flex lg:w-full lg:flex-none"
                 : viewMode === "declaration"
@@ -513,7 +573,10 @@ export default function App() {
               onPick={pickInvoice}
               uploaded={uploaded}
               onUpload={handleUpload}
-              onClearUpload={() => setUploaded(null)}
+              onClearUpload={() => {
+                setUploaded(null);
+                analyzingFileRef.current = null;
+              }}
               onReject={handleReject}
               status={status}
               stage={stage}
@@ -559,7 +622,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="flex h-8 shrink-0 items-center gap-5 border-t border-zinc-800/80 bg-zinc-950 px-5 text-[11px] text-zinc-400">
+      <footer className="flex h-8 shrink-0 items-center gap-5 border-t border-slate-200 bg-white px-5 text-[11px] text-slate-500 dark:border-zinc-800/80 dark:bg-zinc-950 dark:text-zinc-400">
         <span className="truncate">
           PortSync FTZ Agent · reference BTKI 2026 edition ·{" "}
           {ready ? `${calcs.length} classified lines` : "awaiting analysis"}

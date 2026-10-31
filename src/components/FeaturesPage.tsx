@@ -86,16 +86,16 @@ export function FeaturesPage({ onNavigate }: { onNavigate: (p: any) => void }) {
   ];
 
   return (
-    <div className="scroll-thin flex min-h-0 flex-1 flex-col overflow-y-auto bg-zinc-950 text-zinc-100 antialiased">
-      <section className="mx-auto w-full max-w-6xl px-6 py-12">
+    <div className="scroll-thin flex min-h-0 flex-1 flex-col overflow-y-auto bg-slate-50 text-slate-800 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+      <section className="mx-auto w-full shrink-0 max-w-6xl px-6 py-12">
         <div className="flex flex-col items-start max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[11.5px] font-medium text-cyan-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-50 px-3 py-1 text-[11.5px] font-medium text-blue-700 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300">
             <Sparkles size={13} /> Complete Technical Capability Matrix
           </div>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             Features &amp; Customs Engine
           </h1>
-          <p className="mt-3 text-[15px] leading-relaxed text-zinc-400">
+          <p className="mt-3 text-[15px] leading-relaxed text-slate-600 dark:text-zinc-400">
             PortSync FTZ combines automated OCR document ingestion, deterministic BTKI tariff classification, and
             official CEISA 4.0 EDI generator for Batam Free Trade Zone operators.
           </p>
@@ -105,25 +105,25 @@ export function FeaturesPage({ onNavigate }: { onNavigate: (p: any) => void }) {
           {deepFeatures.map((f) => (
             <div
               key={f.title}
-              className="flex flex-col justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm hover:border-zinc-700 hover:bg-zinc-850/80 transition-all"
+              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-slate-300 dark:border-zinc-800 dark:bg-zinc-900/60 dark:hover:border-zinc-700 transition-all"
             >
               <div>
                 <div className="flex items-center gap-3">
-                  <div className="grid size-10 place-items-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+                  <div className="grid size-10 place-items-center rounded-xl border border-blue-500/30 bg-blue-50 text-blue-600 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400">
                     <f.icon size={18} />
                   </div>
                   <div>
-                    <span className="text-[11px] font-mono text-cyan-400 uppercase tracking-wider font-semibold">
+                    <span className="text-[11px] font-mono text-blue-700 uppercase tracking-wider font-semibold dark:text-cyan-400">
                       {f.category}
                     </span>
-                    <h3 className="text-[16px] font-bold text-zinc-100 leading-snug">{f.title}</h3>
+                    <h3 className="text-[16px] font-bold text-slate-900 leading-snug dark:text-zinc-100">{f.title}</h3>
                   </div>
                 </div>
-                <p className="mt-3 text-[13px] leading-relaxed text-zinc-400">{f.desc}</p>
-                <ul className="mt-4 space-y-2 border-t border-zinc-800/80 pt-3">
+                <p className="mt-3 text-[13px] leading-relaxed text-slate-600 dark:text-zinc-400">{f.desc}</p>
+                <ul className="mt-4 space-y-2 border-t border-slate-100 pt-3 dark:border-zinc-800/80">
                   {f.points.map((pt) => (
-                    <li key={pt} className="flex items-start gap-2 text-[12px] text-zinc-300">
-                      <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-400" />
+                    <li key={pt} className="flex items-start gap-2 text-[12px] text-slate-700 dark:text-zinc-300">
+                      <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                       <span>{pt}</span>
                     </li>
                   ))}
@@ -134,23 +134,23 @@ export function FeaturesPage({ onNavigate }: { onNavigate: (p: any) => void }) {
         </div>
 
         {/* Bottom CTA */}
-        <div className="mt-14 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+        <div className="mt-14 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div>
-            <h4 className="text-[16px] font-bold text-white">Experience all features in the live Terminal</h4>
-            <p className="text-[13px] text-zinc-400 mt-0.5">Test real invoices with 8-digit BTKI classification and export XML.</p>
+            <h4 className="text-[16px] font-bold text-slate-900 dark:text-white">Experience all features in the live Terminal</h4>
+            <p className="text-[13px] text-slate-600 mt-0.5 dark:text-zinc-400">Test real invoices with 8-digit BTKI classification and export XML.</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => onNavigate("pricing")}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 cursor-pointer"
+              className="rounded-lg border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 cursor-pointer dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
             >
               View Pricing
             </button>
             <button
               type="button"
               onClick={() => onNavigate("terminal")}
-              className="rounded-lg bg-emerald-500 px-5 py-2 text-xs font-bold text-zinc-950 hover:bg-emerald-400 cursor-pointer flex items-center gap-1.5"
+              className="rounded-lg bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-500 cursor-pointer flex items-center gap-1.5 shadow-sm dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
             >
               Launch Terminal <ArrowRight size={13} />
             </button>
