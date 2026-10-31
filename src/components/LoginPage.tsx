@@ -6,10 +6,12 @@ export function LoginPage({
   onLoggedIn,
   onSwitchToSignup,
   onGuestAccess,
+  onOpenLegal,
 }: {
   onLoggedIn: () => void;
   onSwitchToSignup: () => void;
   onGuestAccess?: () => void;
+  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -136,6 +138,34 @@ export function LoginPage({
               Continue as Guest →
             </button>
           )}
+        </div>
+
+        <div className="mt-5 text-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-500 border-t border-slate-100 pt-3 dark:border-zinc-800/80">
+          By signing in, you agree to our{" "}
+          <button
+            type="button"
+            onClick={() => onOpenLegal?.("tos")}
+            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
+          >
+            Terms of Service
+          </button>
+          ,{" "}
+          <button
+            type="button"
+            onClick={() => onOpenLegal?.("privacy")}
+            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
+          >
+            Privacy Policy
+          </button>
+          , and{" "}
+          <button
+            type="button"
+            onClick={() => onOpenLegal?.("disclaimer")}
+            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
+          >
+            Statutory Disclaimer
+          </button>
+          .
         </div>
       </div>
     </div>

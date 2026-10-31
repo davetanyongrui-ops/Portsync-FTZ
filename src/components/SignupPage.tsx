@@ -5,9 +5,11 @@ import { signUp } from "../lib/auth";
 export function SignupPage({
   onSignedUp,
   onSwitchToLogin,
+  onOpenLegal,
 }: {
   onSignedUp: () => void;
   onSwitchToLogin: () => void;
+  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -86,6 +88,34 @@ export function SignupPage({
           <button type="button" onClick={onSwitchToLogin} className="font-medium text-blue-600 hover:text-blue-700 cursor-pointer dark:text-cyan-400 dark:hover:text-cyan-300">
             Sign in
           </button>
+        </div>
+
+        <div className="mt-5 text-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-500 border-t border-slate-100 pt-3 dark:border-zinc-800/80">
+          By registering, you agree to our{" "}
+          <button
+            type="button"
+            onClick={() => onOpenLegal?.("tos")}
+            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
+          >
+            Terms of Service
+          </button>
+          ,{" "}
+          <button
+            type="button"
+            onClick={() => onOpenLegal?.("privacy")}
+            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
+          >
+            Privacy Policy
+          </button>
+          , and{" "}
+          <button
+            type="button"
+            onClick={() => onOpenLegal?.("disclaimer")}
+            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
+          >
+            Statutory Disclaimer
+          </button>
+          .
         </div>
       </div>
     </div>

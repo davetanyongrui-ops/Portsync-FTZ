@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Anchor, Clock, Moon, RefreshCw, ShieldCheck, Sun, TrendingUp, X } from "lucide-react";
+import { Anchor, Clock, Moon, RefreshCw, Scale, ShieldCheck, Sun, TrendingUp, X } from "lucide-react";
 import { KPB, OPERATOR } from "../data/constants";
 import { LIVE_MARKET_FX, fetchLiveRates, refreshFx, subscribeFx } from "../lib/fx";
 import { fmtClock } from "../lib/format";
@@ -46,12 +46,14 @@ export function TopBar({
   user,
   theme = "light",
   onToggleTheme,
+  onOpenLegal,
 }: {
   agent: { text: string; tone: "idle" | "busy" | "ready" };
   user?: AuthUser | null;
   onLogout?: () => void;
   theme?: "light" | "dark";
   onToggleTheme?: () => void;
+  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
 }) {
   const [now, setNow] = useState(() => new Date());
   const [, force] = useState(0);
@@ -138,6 +140,18 @@ export function TopBar({
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        {onOpenLegal && (
+          <button
+            type="button"
+            onClick={() => onOpenLegal("disclaimer")}
+            className="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-[11.5px] font-medium text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer xl:flex"
+            title="Review Statutory Compliance, Terms of Service & Privacy Policy"
+          >
+            <Scale size={13} className="text-blue-600 dark:text-cyan-400" />
+            <span>Legal &amp; Compliance</span>
+          </button>
+        )}
+
         {onToggleTheme && (
           <button
             type="button"

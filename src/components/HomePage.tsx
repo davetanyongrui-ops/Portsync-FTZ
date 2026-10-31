@@ -1,18 +1,26 @@
 import { useState } from "react";
 import {
+  Anchor,
   ArrowRight,
   CircleDollarSign,
   Cpu,
   FileSearch,
   LayoutDashboard,
+  Scale,
   ShieldCheck,
-  Sparkles,
   Zap,
   CheckCircle2,
+  Lock,
 } from "lucide-react";
 import { fmtIdr, fmtUsd } from "../lib/format";
 
-export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
+export function HomePage({
+  onNavigate,
+  onOpenLegal,
+}: {
+  onNavigate: (p: any) => void;
+  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+}) {
   const [cifInput, setCifInput] = useState(50000);
   const [dutyRate, setDutyRate] = useState(10);
   const kurs = 16200;
@@ -28,22 +36,22 @@ export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
       {/* Hero Section */}
       <section className="relative w-full shrink-0 pt-12 pb-16 border-b border-slate-200 dark:border-zinc-800/80">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center px-6 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-50 px-3.5 py-1 text-[12px] font-medium text-blue-700 shadow-2xs dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300">
-            <Sparkles size={13} className="text-blue-600 dark:text-cyan-400" />
-            <span>Autonomous Customs &amp; Tariff Agent · Batam Free Trade Zone (KPBPB)</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-50 px-4 py-1.5 text-[12px] font-semibold text-blue-800 shadow-2xs dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300">
+            <Anchor size={14} className="text-blue-600 dark:text-cyan-400" />
+            <span>Institutional Customs Automation · Batam Free Trade Zone (KPBPB)</span>
           </div>
 
           <h1 className="mt-6 max-w-4xl text-3xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl sm:leading-[1.1] dark:text-white">
-            Autonomous Customs Intelligence for Batam’s Free Trade Zone
+            Automated Customs Intelligence for Batam’s Free Trade Zone
           </h1>
 
           <p className="mt-5 max-w-3xl text-[16px] leading-relaxed text-slate-600 dark:text-zinc-300">
-            Transforms unstructured foreign shipping manifests into validated, CEISA-ready PPFTZ-01 declarations,
-            automated BTKI 8-digit tariff mappings, and FTA duty optimizations in under 15 seconds.
+            Accelerate international cargo clearance with validated, CEISA-ready PPFTZ-01 declarations,
+            deterministic BTKI 8-digit tariff classifications, and FTA duty optimizations in under 15 seconds.
           </p>
           <p className="mt-2.5 max-w-2xl text-[14px] leading-relaxed text-slate-500 dark:text-zinc-400">
-            Eliminate costly container detention at Pelabuhan Batu Ampar, avoid Jalur Merah (red-line audits),
-            and automate duty-free entry under PP No. 41/2021.
+            Eliminate container demurrage at Pelabuhan Batu Ampar, prevent Jalur Merah inspection delays,
+            and automate duty-free facility claims under PMK No. 185/PMK.04/2022.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -287,8 +295,8 @@ export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
               desc: "Automated cross-check between Commercial Invoice, Packing List, and Bill of Lading. Flags gross weight mismatches and container sealing discrepancies.",
             },
             {
-              icon: Sparkles,
-              title: "AI Tariff & FTA Advisor",
+              icon: Scale,
+              title: "Tariff Optimization & FTA Advisor",
               desc: "Surfaces Form D / ATIGA and Form E / ACFTA opportunities, tracks BP Batam Machinery Masterlist quota balances, and provides legal citations.",
             },
             {
@@ -399,7 +407,7 @@ export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
         </div>
 
         {/* Final CTA Banner */}
-        <div className="mt-16 rounded-2xl border border-emerald-500/30 bg-emerald-50/60 p-8 text-center shadow-xs dark:bg-gradient-to-r dark:from-emerald-950/40 dark:via-zinc-900 dark:to-cyan-950/30">
+        <div className="mt-16 rounded-2xl border border-emerald-500/30 bg-emerald-50/60 p-8 sm:p-10 text-center shadow-xs dark:bg-gradient-to-r dark:from-emerald-950/40 dark:via-zinc-900 dark:to-cyan-950/30">
           <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Experience PortSync FTZ Live</h3>
           <p className="mt-2 text-[14px] text-slate-600 max-w-xl mx-auto dark:text-zinc-400">
             Test the preloaded Singapore, Shenzhen, and Johor consignments in the dual-pane terminal with instant duty calculations.
@@ -415,6 +423,137 @@ export function HomePage({ onNavigate }: { onNavigate: (p: any) => void }) {
           </div>
         </div>
       </section>
+
+      {/* Institutional Legal & Regulatory Footer */}
+      <footer className="border-t border-slate-200 bg-white py-12 px-6 dark:border-zinc-800 dark:bg-zinc-950 text-slate-600 dark:text-zinc-400">
+        <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="grid size-7 place-items-center rounded-lg bg-blue-50 text-blue-600 dark:bg-cyan-500/10 dark:text-cyan-400">
+                <Anchor size={16} />
+              </div>
+              <span className="font-bold text-[15px] text-slate-900 dark:text-white">PortSync FTZ</span>
+            </div>
+            <p className="text-[12px] leading-relaxed text-slate-500 dark:text-zinc-400">
+              Autonomous customs compliance and BTKI 8-digit tariff automation engineered for the Batam Free Trade Zone (KPBPB).
+            </p>
+            <div className="text-[11px] font-mono text-slate-400 dark:text-zinc-500">
+              Reference BTKI 2026 Edition · PMK 185/2022
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-[12px] font-bold uppercase tracking-wider text-slate-900 dark:text-zinc-200 mb-3">
+              Customs Operations
+            </h4>
+            <ul className="space-y-2 text-[12.5px]">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("terminal")}
+                  className="hover:text-blue-600 dark:hover:text-cyan-400 cursor-pointer transition-colors"
+                >
+                  Customs Terminal
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("features")}
+                  className="hover:text-blue-600 dark:hover:text-cyan-400 cursor-pointer transition-colors"
+                >
+                  System Architecture
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("pricing")}
+                  className="hover:text-blue-600 dark:hover:text-cyan-400 cursor-pointer transition-colors"
+                >
+                  Broker Tier Licensing
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("contact")}
+                  className="hover:text-blue-600 dark:hover:text-cyan-400 cursor-pointer transition-colors"
+                >
+                  Customs Support
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-[12px] font-bold uppercase tracking-wider text-slate-900 dark:text-zinc-200 mb-3">
+              Legal &amp; Compliance
+            </h4>
+            <ul className="space-y-2 text-[12.5px]">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onOpenLegal?.("disclaimer")}
+                  className="hover:text-blue-600 dark:hover:text-cyan-400 cursor-pointer transition-colors flex items-center gap-1.5"
+                >
+                  <Scale size={13} className="text-blue-600 dark:text-cyan-400" />
+                  <span>Statutory Disclaimer</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onOpenLegal?.("tos")}
+                  className="hover:text-blue-600 dark:hover:text-cyan-400 cursor-pointer transition-colors flex items-center gap-1.5"
+                >
+                  <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Terms of Service</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onOpenLegal?.("privacy")}
+                  className="hover:text-blue-600 dark:hover:text-cyan-400 cursor-pointer transition-colors flex items-center gap-1.5"
+                >
+                  <Lock size={13} className="text-slate-500 dark:text-zinc-400" />
+                  <span>Trade Privacy Policy</span>
+                </button>
+              </li>
+              <li className="pt-1">
+                <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-500/30">
+                  PMK 185/2022 Compliant
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-[12px] font-bold uppercase tracking-wider text-slate-900 dark:text-zinc-200 mb-3">
+              Batam KPBPB Jurisdiction
+            </h4>
+            <p className="text-[12px] text-slate-500 dark:text-zinc-400 leading-relaxed">
+              Kawasan Perdagangan Bebas dan Pelabuhan Bebas Batam (KPBPB). Operated in accordance with BP Batam and KPU Bea dan Cukai Tipe B Batam guidelines.
+            </p>
+            <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="size-2 rounded-full bg-emerald-500 animate-blip" />
+              <span>Pelabuhan Batu Ampar Berth Online</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-6xl mt-10 border-t border-slate-100 pt-6 flex flex-wrap items-center justify-between text-[11.5px] text-slate-500 dark:border-zinc-800/80 dark:text-zinc-500">
+          <div>© 2026 PT Portsync Logistics Systems. All statutory rights reserved.</div>
+          <div className="flex items-center gap-4">
+            <span>Batam Enclave Gateway</span>
+            <span>·</span>
+            <span>CEISA 4.0 XML Schemas</span>
+            <span>·</span>
+            <span>UU No. 17/2006</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

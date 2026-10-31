@@ -12,6 +12,7 @@ import { TopBar } from "./components/TopBar";
 import { LeftPanel, PIPELINE, type AnalyzeState } from "./components/LeftPanel";
 import { LoginPage } from "./components/LoginPage";
 import { SignupPage } from "./components/SignupPage";
+import { LegalModal, type LegalDocType } from "./components/LegalModal";
 import { getSession, logOut, demoLogIn, DEFAULT_DEMO_USER, type AuthUser } from "./lib/auth";
 import type { UploadedFile } from "./components/UploadZone";
 import { RightPanel } from "./components/RightPanel";
@@ -107,6 +108,7 @@ export default function App() {
   const [regime, setRegime] = useState<Regime>("PPFTZ-01");
   const [, setFxTick] = useState(0);
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [legalDoc, setLegalDoc] = useState<LegalDocType | null>(null);
 
   useEffect(() => {
     setThemeInStorage(theme);
@@ -415,6 +417,7 @@ export default function App() {
         user={user}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onOpenLegal={(doc) => setLegalDoc(doc)}
         onLogout={() => {
           logOut();
           setUser(null);
@@ -554,7 +557,7 @@ export default function App() {
       {/* Main Workspace Area */}
       {page !== "terminal" ? (
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {page === "home" && <HomePage onNavigate={navigate} />}
+          {page === "home" && <HomePage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
           {page === "features" && <FeaturesPage onNavigate={navigate} />}
           {page === "pricing" && <PricingPage onNavigate={navigate} />}
           {page === "contact" && <ContactPage onNavigate={navigate} />}
@@ -566,6 +569,7 @@ export default function App() {
               }}
               onSwitchToSignup={() => navigate("signup")}
               onGuestAccess={() => navigate("terminal")}
+              onOpenLegal={(doc) => setLegalDoc(doc)}
             />
           )}
           {page === "signup" && (
@@ -575,6 +579,7 @@ export default function App() {
                 navigate("terminal");
               }}
               onSwitchToLogin={() => navigate("login")}
+              onOpenLegal={(doc) => setLegalDoc(doc)}
             />
           )}
         </main>
@@ -647,27 +652,60 @@ export default function App() {
               regime={regime}
               onRegimeChange={setRegime}
               onToggleMasterlist={toggleMasterlist}
+              onOpenLegal={(doc) => setLegalDoc(doc)}
             />
           </div>
         </main>
       )}
 
       {/* Footer */}
-      <footer className="flex h-8 shrink-0 items-center gap-5 border-t border-slate-200 bg-white px-5 text-[11px] text-slate-500 dark:border-zinc-800/80 dark:bg-zinc-950 dark:text-zinc-400">
-        <span className="truncate">
+      <footer className="flex h-8 shrink-0 flex-wrap items-center gap-4 border-t border-slate-200 bg-white/95 px-5 text-[11px] text-slate-500 backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-950 dark:text-zinc-400">
+        <span className="truncate font-medium text-slate-700 dark:text-zinc-300">
           PortSync FTZ Agent · reference BTKI 2026 edition ·{" "}
           {ready ? `${calcs.length} classified lines` : "awaiting analysis"}
         </span>
-        <span className="tnum hidden xl:inline">
+        <span className="tnum hidden 2xl:inline text-slate-500 dark:text-zinc-400">
           Kurs pabean USD/IDR {FX.USD_IDR.toLocaleString("id-ID")} · PPN {(PPN_RATE * 100).toFixed(0)}% · PPh 22{" "}
           {(PPH22_RATE * 100).toFixed(1)}%
         </span>
-        <span className="ml-auto tnum shrink-0 text-zinc-300">
+
+        {/* Legal & Compliance Links */}
+        <div className="hidden sm:flex items-center gap-2.5 text-[11px] border-l border-slate-200 pl-3 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={() => setLegalDoc("disclaimer")}
+            className="font-semibold text-slate-600 hover:text-blue-700 hover:underline cursor-pointer dark:text-zinc-400 dark:hover:text-cyan-300"
+          >
+            Statutory Disclaimer
+          </button>
+          <span className="text-slate-300 dark:text-zinc-700">·</span>
+          <button
+            type="button"
+            onClick={() => setLegalDoc("tos")}
+            className="font-medium text-slate-600 hover:text-slate-900 hover:underline cursor-pointer dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            Terms of Service
+          </button>
+          <span className="text-slate-300 dark:text-zinc-700">·</span>
+          <button
+            type="button"
+            onClick={() => setLegalDoc("privacy")}
+            className="font-medium text-slate-600 hover:text-slate-900 hover:underline cursor-pointer dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            Privacy Policy
+          </button>
+        </div>
+
+        <span className="ml-auto tnum shrink-0 text-slate-500 dark:text-zinc-400">
           Invoice total {fmtUsd(totals.usdCif)} · filing set {ready ? `${totals.selected}/${totals.lines}` : "—"}
         </span>
-        <span className="shrink-0 text-emerald-400 font-medium">sandbox · no live dispatch</span>
+        <span className="shrink-0 text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-blip" />
+          sandbox · no live dispatch
+        </span>
       </footer>
 
+      {legalDoc && <LegalModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
       {modal && <PayloadModal payload={modal} onClose={() => setModal(null)} onCopied={onCopied} />}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
