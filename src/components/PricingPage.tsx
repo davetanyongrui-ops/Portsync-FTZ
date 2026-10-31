@@ -1,39 +1,177 @@
-import { ArrowRight, Check } from "lucide-react";
-
-const plans = [
-  { name: "Starter", price: "Free", desc: "For evaluation and small consignments.", features: ["3 demo invoices", "BTKI classification", "PPFTZ-01/02/03 regimes", "Sandbox payload export"] },
-  { name: "Professional", price: "$49/mo", desc: "For active brokers and manufacturers.", features: ["Unlimited declarations", "Real OCR parsing", "Live BTKI feed", "Turso-backed history", "Priority support"] },
-  { name: "Enterprise", price: "Custom", desc: "For large operators and FTZs.", features: ["Dedicated instance", "SSO & audit logs", "Custom tariff feeds", "SLA & onboarding"] },
-];
+import { useState } from "react";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 
 export function PricingPage({ onNavigate }: { onNavigate: (p: any) => void }) {
+  const [annual, setAnnual] = useState(true);
+
+  const plans = [
+    {
+      name: "Starter / Evaluation",
+      price: "Free",
+      period: "forever",
+      desc: "For individual customs brokers and testing consignments.",
+      highlight: false,
+      features: [
+        "3 preloaded demo fixtures (Singapore, Shenzhen, Johor)",
+        "Deterministic BTKI 2026 classification",
+        "PPFTZ-01, PPFTZ-02, PPFTZ-03 regimes",
+        "CEISA 4.0 JSON & XML payload export",
+        "Local sandbox client-side execution",
+      ],
+      cta: "Launch Free Sandbox",
+      action: () => onNavigate("terminal"),
+    },
+    {
+      name: "Professional Broker",
+      price: annual ? "$39" : "$49",
+      period: "/ month",
+      desc: "For active customs PPJK agencies and logistics operators.",
+      highlight: true,
+      badge: "Most Popular",
+      features: [
+        "Everything in Starter, plus:",
+        "Unlimited document OCR ingestion (PDF/PNG)",
+        "3-Way Document Audit (Invoice vs P/L vs B/L)",
+        "AI Tariff & FTA Advisor (Form D/E & Masterlist)",
+        "Turso libSQL distributed session audit log",
+        "Priority Batam customs regulations updates",
+      ],
+      cta: "Start 14-Day Free Trial",
+      action: () => onNavigate("terminal"),
+    },
+    {
+      name: "Enterprise FTZ Facility",
+      price: "Custom",
+      period: "annual contract",
+      desc: "For large FTZ manufacturers, shipyards, and port authorities.",
+      highlight: false,
+      features: [
+        "Dedicated on-prem or private cloud instance",
+        "Direct CEISA 4.0 INSW API gateway connector",
+        "ERP integration (SAP S/4HANA, Oracle, Odoo)",
+        "Multi-user RBAC with digital signature audit",
+        "Dedicated Customs Compliance SLA & 24/7 Desk",
+      ],
+      cta: "Contact Enterprise Sales",
+      action: () => onNavigate("contact"),
+    },
+  ];
+
   return (
-    <div className="scroll-thin flex min-h-0 flex-1 flex-col overflow-y-auto bg-slate-50">
-      <section className="mx-auto w-full max-w-5xl px-6 py-12">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Pricing</h1>
-        <p className="mt-2 text-[14px] text-slate-600">Choose the plan that fits your operation.</p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          {plans.map((plan) => (
-            <div key={plan.name} className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
-              <div className="text-[13px] font-semibold text-slate-900">{plan.name}</div>
-              <div className="mt-2 text-2xl font-bold text-slate-900">{plan.price}</div>
-              <div className="mt-1 text-[12px] text-slate-500">{plan.desc}</div>
-              <ul className="mt-4 flex-1 space-y-2">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-[12.5px] text-slate-700">
-                    <Check size={13} className="text-emerald-600" /> {f}
-                  </li>
-                ))}
-              </ul>
+    <div className="scroll-thin flex min-h-0 flex-1 flex-col overflow-y-auto bg-zinc-950 text-zinc-100 antialiased">
+      <section className="mx-auto w-full max-w-6xl px-6 py-12">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold text-cyan-300">
+            <Sparkles size={13} /> Transparent, Value-Driven Pricing
+          </div>
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            Choose the Plan Built for Your Operations
+          </h1>
+          <p className="mt-3 text-[14.5px] text-zinc-400">
+            Accelerate customs clearance, eliminate filing errors, and retain capital with automated Batam FTZ facilities.
+          </p>
+
+          {/* Billing Switch */}
+          <div className="mt-8 inline-flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-1.5">
+            <button
+              type="button"
+              onClick={() => setAnnual(false)}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                !annual ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Monthly Billing
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnnual(true)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                annual ? "bg-emerald-500 text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Annual Billing
+              <span className={`rounded px-1.5 py-0.5 text-[10px] ${annual ? "bg-zinc-950 text-emerald-400 font-bold" : "bg-emerald-500/20 text-emerald-300"}`}>
+                Save 20%
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Pricing Cards */}
+        <div className="mt-12 grid gap-6 sm:grid-cols-3">
+          {plans.map((p) => (
+            <div
+              key={p.name}
+              className={`flex flex-col justify-between rounded-2xl border p-6 transition-all ${
+                p.highlight
+                  ? "border-emerald-500/50 bg-gradient-to-b from-zinc-900 via-zinc-900 to-emerald-950/20 shadow-xl shadow-emerald-500/10 ring-1 ring-emerald-500/30"
+                  : "border-zinc-800 bg-zinc-900/60 shadow-sm hover:border-zinc-700"
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[14px] font-bold text-zinc-100">{p.name}</span>
+                  {p.badge && (
+                    <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                      {p.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4 flex items-baseline gap-1.5">
+                  <span className="text-3xl font-extrabold text-white">{p.price}</span>
+                  <span className="text-xs text-zinc-400">{p.period}</span>
+                </div>
+                <p className="mt-2 text-[12.5px] text-zinc-400 leading-relaxed">{p.desc}</p>
+
+                <ul className="mt-6 space-y-2.5 border-t border-zinc-800/80 pt-5">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-[12.5px] text-zinc-300">
+                      <Check size={14} className="mt-0.5 shrink-0 text-emerald-400" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
               <button
                 type="button"
-                onClick={() => onNavigate("home")}
-                className="mt-6 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-[12.5px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                onClick={p.action}
+                className={`mt-8 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition-all cursor-pointer ${
+                  p.highlight
+                    ? "bg-emerald-500 text-zinc-950 hover:bg-emerald-400 shadow-md shadow-emerald-500/20"
+                    : "border border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white"
+                }`}
               >
-                Get started <ArrowRight size={13} />
+                {p.cta} <ArrowRight size={13} />
               </button>
             </div>
           ))}
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-16 max-w-3xl mx-auto border-t border-zinc-800/80 pt-12">
+          <h2 className="text-xl font-bold text-white text-center">Frequently Asked Questions</h2>
+          <div className="mt-6 space-y-4">
+            {[
+              {
+                q: "What is the legal basis for the 100% duty exemption in Batam?",
+                a: "Under Government Regulation PP 156/2015 jo. Minister of Finance Regulation PMK 111/PMK.04/2019, goods imported into the Batam Free Trade Zone (KPBPB) are granted suspension of Bea Masuk, PPN 11%, and PPh Pasal 22 while remaining inside the designated bonded enclave.",
+              },
+              {
+                q: "Can I submit the generated XML directly into CEISA 4.0?",
+                a: "Yes. The generated CEISA XML payload complies with the official EDI schema of the Directorate General of Customs and Excise (DJBC) Batam. You can paste the payload or upload the XML file into your CEISA 4.0 gateway.",
+              },
+              {
+                q: "How does the broker override feature work?",
+                a: "While the BTKI engine classifies items automatically with high precision, customs brokers retain the statutory authority to override any HS code. The engine immediately recomputes the MFN vs FTZ duty breakdown and logs the decision with an idempotency key.",
+              },
+            ].map((faq) => (
+              <div key={faq.q} className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+                <div className="text-[13.5px] font-semibold text-zinc-200">{faq.q}</div>
+                <div className="mt-2 text-[12.5px] text-zinc-400 leading-relaxed">{faq.a}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

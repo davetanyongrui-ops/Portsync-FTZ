@@ -28,6 +28,7 @@ export function InvoicePage({
   invoice: DemoInvoice;
   calcs: LineCalc[];
   analyzed: boolean;
+  analyzing?: boolean;
   activeId: string | null;
   onActive: (id: string | null) => void;
 }) {
