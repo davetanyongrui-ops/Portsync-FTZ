@@ -33,6 +33,7 @@ function Row({
   onActive,
   onToggle,
   onOverride,
+  onToggleMasterlist,
 }: {
   c: LineCalc;
   selected: boolean;
@@ -40,6 +41,7 @@ function Row({
   onActive: (id: string | null) => void;
   onToggle: (id: string) => void;
   onOverride: (id: string, hs: string) => void;
+  onToggleMasterlist?: (id: string) => void;
 }) {
   const options = useMemo(() => hsOptions(c.line), [c.line]);
   const visibleBadges = c.badges.slice(0, 3);
@@ -133,6 +135,19 @@ function Row({
             broker override
           </Pill>
         )}
+        {c.isAsset && (
+          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+            <label className="inline-flex items-center gap-1.5 cursor-pointer rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800">
+              <input
+                type="checkbox"
+                checked={Boolean(c.hasMasterlist)}
+                onChange={() => onToggleMasterlist?.(c.id)}
+                className="size-3 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900"
+              />
+              <span>BP Batam Masterlist</span>
+            </label>
+          </div>
+        )}
         <div className="tnum mt-2 text-[11.5px] whitespace-nowrap">
           {c.blocked ? (
             <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400">
@@ -206,6 +221,7 @@ export function DeclarationTable({
   onToggle,
   onSelectAll,
   onOverride,
+  onToggleMasterlist,
 }: {
   calcs: LineCalc[];
   selectedIds: Set<string>;
@@ -215,6 +231,7 @@ export function DeclarationTable({
   onToggle: (id: string) => void;
   onSelectAll: (on: boolean) => void;
   onOverride: (id: string, hs: string) => void;
+  onToggleMasterlist?: (id: string) => void;
 }) {
   if (!ready) {
     return (
@@ -267,6 +284,7 @@ export function DeclarationTable({
               onActive={onActive}
               onToggle={onToggle}
               onOverride={onOverride}
+              onToggleMasterlist={onToggleMasterlist}
             />
           ))}
         </tbody>

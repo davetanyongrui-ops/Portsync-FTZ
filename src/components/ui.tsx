@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
+  AlertCircle,
+  AlertTriangle,
   ArrowRightLeft,
   BadgeCheck,
   Factory,
@@ -56,6 +58,8 @@ const BADGE_VIEW: Record<RegulatoryBadge["kind"], { tone: Tone; icon: LucideIcon
   sni: { tone: "iris", icon: BadgeCheck },
   ad: { tone: "bad", icon: Percent },
   tkdn: { tone: "brand", icon: Factory },
+  excise: { tone: "bad", icon: AlertTriangle },
+  asset: { tone: "warn", icon: AlertCircle },
 };
 
 export function RegBadgeView({ badge }: { badge: RegulatoryBadge }) {

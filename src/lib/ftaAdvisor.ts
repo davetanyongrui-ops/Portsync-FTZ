@@ -9,7 +9,18 @@ export interface FtaRecommendation {
 const ASEAN_MEMBERS = ["SG", "MY", "TH", "VN", "PH", "BN", "KH", "LA", "MM", "ID"];
 
 export function getFtaRecommendation(countryOfOrigin: string): FtaRecommendation {
-  const origin = countryOfOrigin.toUpperCase();
+  const origin = (countryOfOrigin || "").trim().toUpperCase();
+
+  if (origin === "JP") {
+    return {
+      schemeName: "IJEPA / RCEP",
+      formType: "Form IJ / RCEP",
+      eligible: true,
+      legalBasis: "PMK No. 95/PMK.04/2019 jo. PMK No. 102/PMK.010/2022",
+      adviceMessage:
+        "Detected Japan origin (JP). Use IJEPA (Form IJ) / RCEP preferential tariff route. Do NOT apply ATIGA.",
+    };
+  }
 
   if (origin === "CN") {
     return {

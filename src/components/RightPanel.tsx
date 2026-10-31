@@ -32,6 +32,7 @@ export function RightPanel({
   onOpenPayload,
   regime = "PPFTZ-01",
   onRegimeChange,
+  onToggleMasterlist,
 }: {
   invoice: DemoInvoice;
   calcs: LineCalc[];
@@ -47,6 +48,7 @@ export function RightPanel({
   onOpenPayload: () => void;
   regime?: Regime;
   onRegimeChange?: (r: Regime) => void;
+  onToggleMasterlist?: (id: string) => void;
 }) {
   const overrides = calcs.filter((c) => c.overridden).length;
   const allSelected = ready && calcs.every((c) => selectedIds.has(c.id));
@@ -148,6 +150,7 @@ export function RightPanel({
           onToggle={onToggle}
           onSelectAll={onSelectAll}
           onOverride={onOverride}
+          onToggleMasterlist={onToggleMasterlist}
         />
       )}
 

@@ -21,11 +21,24 @@ export function validationReport(calcs: LineCalc[], totals: DeclarationTotals) {
   const warnings: { pos: number; code: string; message: string }[] = [];
 
   for (const c of calcs) {
-    if (c.blocked) {
+    if (c.isExcise) {
+      blocking.push({
+        pos: c.pos,
+        code: "EXCISE-BLOCKED",
+        message: `${c.hs} is an Excise Good (Barang Kena Cukai): Ineligible for PPFTZ-01 exemption under PP No. 41/2021. Mandatory excise tax notice applies (10% BM + 11% PPN).`,
+      });
+    } else if (c.blocked) {
       blocking.push({
         pos: c.pos,
         code: "LARTAS-PRE",
         message: `${c.hs} is pre-border Lartas: ${c.entry.permits?.[0]?.label ?? "import approval"} must be quoted in the PIB licence block.`,
+      });
+    }
+    if (c.isAsset && !c.hasMasterlist) {
+      warnings.push({
+        pos: c.pos,
+        code: "NON-PRODUCTION-ASSET",
+        message: `${c.hs} is a Non-Production Asset (Restricted Exemption): Standard 15% BM + 11% PPN payable unless an explicit BP Batam Masterlist is selected.`,
       });
     }
     if (c.lartas === "POST_BORDER") {
@@ -37,7 +50,7 @@ export function validationReport(calcs: LineCalc[], totals: DeclarationTotals) {
     }
     if (c.entry.sni) warnings.push({ pos: c.pos, code: "SNI", message: `${c.entry.sni.standard} certificate number not present on the source document.` });
     if (c.bmadRate > 0) warnings.push({ pos: c.pos, code: "BMAD", message: `Anti-dumping ${Math.round(c.bmadRate * 100)}% on ${c.line.origin} origin — exempted in-zone, due on any TPBD release.` });
-    if (c.coverage < 1) warnings.push({ pos: c.pos, code: "TPBD", message: c.line.releaseNote ?? "Partial mainland release on this line." });
+    if (c.coverage < 1 && !c.isExcise && (!c.isAsset || c.hasMasterlist)) warnings.push({ pos: c.pos, code: "TPBD", message: c.line.releaseNote ?? "Partial mainland release on this line." });
     if (c.confidence < 0.7) warnings.push({ pos: c.pos, code: "CLASS-LOW", message: `Classification confidence ${(c.confidence * 100).toFixed(0)}% — broker review required before filing.` });
   }
 
@@ -168,7 +181,11 @@ export function buildPpftzPayload(
         ppnPersen: r2((c.ppnRate * (1 - c.coverage)) * 100),
         totalHarusDibayarIdr: r0(c.payable),
         penghematanIdr: r0(c.saved),
-        catatan: c.line.releaseNote ?? "Seluruh nilai barang dimanfaatkan di dalam enklave KPBPB.",
+        catatan: c.isExcise
+          ? "Barang Kena Cukai (MMEA / Etil Alkohol) — Tidak berhak atas fasilitas pembebasan PPFTZ-01."
+          : c.isAsset && !c.hasMasterlist
+            ? "Aset Non-Produksi / Konsumtif — Dikenakan BM 15% + PPN 11% tanpa Masterlist BP Batam."
+            : c.line.releaseNote ?? "Seluruh nilai barang dimanfaatkan di dalam enklave KPBPB.",
       },
       opsiPreferensi: {
         skema: c.fta.scheme,

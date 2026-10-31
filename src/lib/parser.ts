@@ -1,4 +1,5 @@
 import type { DemoInvoice, InvoiceLine, Uom } from "../types";
+import { isExciseGood, isNonProductionAsset } from "./engine";
 
 interface KeywordHsMap {
   keywords: string[];
@@ -10,6 +11,46 @@ interface KeywordHsMap {
 }
 
 const TARIFF_RULES: KeywordHsMap[] = [
+  {
+    keywords: ["linear motion guide", "linear motion guides", "ball slide", "ball slides", "linear guide", "motion guide", "slide rail", "linear bearing"],
+    hs: "8482.10.00",
+    confidence: 0.98,
+    note: "Ball bearings & linear guide components (Linear motion guides / ball slides)",
+    altHs: "8482.10.11",
+    altNote: "Deep groove ball bearings — rotational bearing unit",
+  },
+  {
+    keywords: ["undenatured ethyl alcohol", "ethyl alcohol", "ethanol", "alcohol", "mmea"],
+    hs: "2207.10.00",
+    confidence: 0.99,
+    note: "Undenatured ethyl alcohol >= 80% (Ethyl alcohol / Cukai MMEA) — EXCISE GOOD",
+    altHs: "2208.90.90",
+    altNote: "Other spirituous beverages / denatured alcohol",
+  },
+  {
+    keywords: ["industrial servo drive", "industrial servo drives", "servo drive", "servo drives", "servo converter", "static converter", "inverter drive", "frequency converter"],
+    hs: "8504.40.90",
+    confidence: 0.98,
+    note: "Static converters (Industrial servo drives / converters)",
+    altHs: "8504.40.30",
+    altNote: "Uninterruptible power supplies (UPS)",
+  },
+  {
+    keywords: ["swivel office chair", "swivel office chairs", "swivel chair", "office chair", "swivel seats", "chair", "desk", "sofa", "office furniture"],
+    hs: "9401.30.00",
+    confidence: 0.97,
+    note: "Swivel seats with variable height (Swivel office chairs) — Non-Production Asset",
+    altHs: "9403.10.00",
+    altNote: "Metal furniture of a kind used in offices",
+  },
+  {
+    keywords: ["fiber optic cable", "fiber optic cables", "optical fibre cable", "optical fibre cables", "fiber optic", "fibre optic", "optical cable", "optical fiber"],
+    hs: "8544.70.00",
+    confidence: 0.98,
+    note: "Optical fibre cables (Fiber optic cables)",
+    altHs: "8544.42.00",
+    altNote: "Electric conductors <= 1000V with connectors",
+  },
   {
     keywords: ["battery", "accumulator", "lithium", "lifepo4", "cell", "energy storage", "power pack"],
     hs: "8507.60.90",
@@ -399,6 +440,9 @@ function buildLineFromText(pos: number, fullText: string): InvoiceLine | null {
     const unitPrice = parseFloat(match[5]!) || 50;
 
     const tariff = matchTariff(raw);
+    const excise = isExciseGood(raw, tariff.hs);
+    const asset = isNonProductionAsset(raw, tariff.hs);
+    const coverage = excise || asset ? 0 : 1;
 
     return {
       id: `custom-line-${pos}`,
@@ -413,7 +457,8 @@ function buildLineFromText(pos: number, fullText: string): InvoiceLine | null {
       hs: tariff.hs,
       confidence: tariff.confidence,
       candidates: tariff.candidates,
-      ftzCoverage: 1,
+      ftzCoverage: coverage,
+      ftz_exemption_eligible: !excise && !asset,
       span: { x: 0.045, w: 0.6 },
     };
   }
@@ -428,6 +473,9 @@ function buildLineFromText(pos: number, fullText: string): InvoiceLine | null {
     const uom = qtyMatch ? parseUom(qtyMatch[2]!) : "PCE";
     const unitPrice = priceMatch ? parseFloat(priceMatch[1]!) : 45;
     const tariff = matchTariff(raw);
+    const excise = isExciseGood(raw, tariff.hs);
+    const asset = isNonProductionAsset(raw, tariff.hs);
+    const coverage = excise || asset ? 0 : 1;
 
     return {
       id: `custom-line-${pos}`,
@@ -442,7 +490,8 @@ function buildLineFromText(pos: number, fullText: string): InvoiceLine | null {
       hs: tariff.hs,
       confidence: tariff.confidence,
       candidates: tariff.candidates,
-      ftzCoverage: 1,
+      ftzCoverage: coverage,
+      ftz_exemption_eligible: !excise && !asset,
       span: { x: 0.045, w: 0.6 },
     };
   }

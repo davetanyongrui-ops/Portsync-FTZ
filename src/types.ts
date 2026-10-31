@@ -74,6 +74,8 @@ export interface InvoiceLine {
   candidates: HsCandidate[];
   /** Share of the line covered by the PPFTZ-01 in-zone facility (1 = fully exempt). */
   ftzCoverage: number;
+  /** Whether the line is eligible for PPFTZ-01 exemption (false for Excise goods). */
+  ftz_exemption_eligible?: boolean;
   /** Set when part of the line is released straight onward to TPBD (mainland). */
   releaseNote?: string;
   /** OCR detection span within the document page, as a fraction of page width. */
@@ -129,7 +131,7 @@ export interface DutySplit {
   total: number;
 }
 
-export type BadgeKind = "facility" | "lartas-post" | "lartas-pre" | "sni" | "ad" | "tkdn" | "tpbd";
+export type BadgeKind = "facility" | "lartas-post" | "lartas-pre" | "sni" | "ad" | "tkdn" | "tpbd" | "excise" | "asset";
 
 export interface RegulatoryBadge {
   kind: BadgeKind;
@@ -168,6 +170,11 @@ export interface LineCalc {
   badges: RegulatoryBadge[];
   risk: RiskTier;
   blocked: boolean;
+  /** Compliance rule flags */
+  ftz_exemption_eligible: boolean;
+  isExcise: boolean;
+  isAsset: boolean;
+  hasMasterlist?: boolean;
   /** Preferential option the agent identified but did not apply to the headline comparator. */
   fta: { scheme: string; bmRate: number; deltaVsMfn: number };
 }

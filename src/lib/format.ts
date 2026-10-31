@@ -12,13 +12,14 @@ export const fmtQty = (n: number) => qty.format(n);
 
 export const fmtPct = (r: number, digits = 0) => `${(r * 100).toFixed(digits)}%`;
 
-/** Indonesian short scale for dense cards: rb (ribu), jt (juta), M (miliar). */
+/** Indonesian standardized currency format: Miliar (>= 1 Mrd), Juta (>= 1 Jt), Ribu (>= 1 Rb). */
 export function fmtIdrShort(n: number): string {
   const a = Math.abs(n);
-  if (a >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(a >= 10_000_000_000 ? 1 : 2)} M`;
-  if (a >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(a >= 10_000_000 ? 1 : 2)} jt`;
-  if (a >= 1_000) return `Rp ${Math.round(n / 1000)} rb`;
-  return `Rp ${Math.round(n)}`;
+  const sign = n < 0 ? "-" : "";
+  if (a >= 1_000_000_000) return `${sign}Rp ${(a / 1_000_000_000).toFixed(2)} Miliar`;
+  if (a >= 1_000_000) return `${sign}Rp ${(a / 1_000_000).toFixed(1)} Juta`;
+  if (a >= 1_000) return `${sign}Rp ${Math.round(a / 1000)} Ribu`;
+  return `${sign}Rp ${Math.round(a)}`;
 }
 
 export function fmtDate(iso: string) {

@@ -95,6 +95,7 @@ export default function App() {
   const [status, setStatus] = useState<AnalyzeState>("staged");
   const [stage, setStage] = useState(0);
   const [overrides, setOverrides] = useState<Overrides>({});
+  const [masterlistMap, setMasterlistMap] = useState<Record<string, boolean>>({});
   const [selectedMap, setSelectedMap] = useState<Record<string, boolean>>(() =>
     selectAllOf(DEMO_INVOICES[0]!.lines.map((l) => l.id)),
   );
@@ -132,8 +133,8 @@ export default function App() {
   );
 
   const { calcs, totals } = useMemo(
-    () => buildDeclaration(invoice, overrides, selectedSet, regime),
-    [invoice, overrides, selectedSet, regime],
+    () => buildDeclaration(invoice, overrides, selectedSet, regime, masterlistMap),
+    [invoice, overrides, selectedSet, regime, masterlistMap],
   );
 
   const rows = useMemo(() => calcs.map((c) => ({ ...c, selected: selectedSet.has(c.id) })), [calcs, selectedSet]);
@@ -179,6 +180,7 @@ export default function App() {
       const next = getInvoice(id);
       setInvoiceId(id);
       setOverrides({});
+      setMasterlistMap({});
       setSelectedMap(selectAllOf(next.lines.map((l) => l.id)));
       setActiveId(null);
       setStage(0);
@@ -227,6 +229,7 @@ export default function App() {
 
   const resetOverrides = useCallback(() => {
     setOverrides({});
+    setMasterlistMap({});
     setSelectedMap(selectAllOf(invoice.lines.map((l) => l.id)));
     setActiveId(null);
     pushToast({
@@ -235,6 +238,24 @@ export default function App() {
       detail: `All ${invoice.lines.length} lines back to the agent's top pick.`,
     });
   }, [invoice, pushToast]);
+
+  const toggleMasterlist = useCallback(
+    (id: string) => {
+      setMasterlistMap((prev) => {
+        const next = !prev[id];
+        const line = invoice.lines.find((l) => l.id === id);
+        pushToast({
+          tone: next ? "good" : "warn",
+          title: next ? "BP Batam Masterlist Applied" : "Masterlist Exemption Removed",
+          detail: next
+            ? `POS ${line?.pos ?? ""} granted 100% duty & PPN suspension under approved Masterlist.`
+            : `POS ${line?.pos ?? ""} reverted to restricted exemption (15% BM + 11% PPN).`,
+        });
+        return { ...prev, [id]: next };
+      });
+    },
+    [invoice, pushToast],
+  );
 
   const toggleLine = useCallback((id: string) => {
     setSelectedMap((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -625,6 +646,7 @@ export default function App() {
               onOpenPayload={openPayload}
               regime={regime}
               onRegimeChange={setRegime}
+              onToggleMasterlist={toggleMasterlist}
             />
           </div>
         </main>
