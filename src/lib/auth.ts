@@ -3,7 +3,10 @@ export interface AuthUser {
   name: string;
   role?: string;
   company?: string;
+  /** Only ever set by a server that actually issued it. Never synthesised. */
   licenseNo?: string;
+  /** True when the session was created on this device with no server check. */
+  local?: boolean;
 }
 
 const API_BASE =
@@ -14,9 +17,9 @@ const SESSION_KEY = "portsync-ftz-session";
 export const DEFAULT_DEMO_USER: AuthUser = {
   email: "broker@portsync-ftz.io",
   name: "D. Tan",
-  role: "Chief Verification Broker (PPJK Grade 3)",
+  role: "Verification Broker (demo profile)",
   company: "PT Portsync Logistics Systems",
-  licenseNo: "PPJK-BTM-0912-2026",
+  local: true,
 };
 
 export function getSession(): AuthUser | null {
@@ -63,13 +66,14 @@ export async function signUp(
     // Network or server unreachable - fall through to offline local session
   }
 
-  // Graceful offline fallback for hackathon / static preview
+  // No server answered. Open a local session and say so — no credentials were
+  // checked, so nothing that looks like an issued licence may be attached.
   const localUser: AuthUser = {
     email: email.toLowerCase(),
-    name: name || "Verified Operator",
-    role: "Customs Broker",
+    name: name || "Local operator",
+    role: "Unverified local session",
     company: "PT Portsync Logistics Systems",
-    licenseNo: "PPJK-BTM-DEMO-2026",
+    local: true,
   };
   setSession(localUser);
   return { ok: true };
@@ -101,13 +105,13 @@ export async function logIn(
     // Network or server unreachable - fall through to offline local session
   }
 
-  // Graceful offline fallback
+  // No server answered. Open a local session and say so.
   const user: AuthUser = {
     email: email.toLowerCase(),
-    name: email.split("@")[0]?.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Customs Broker",
-    role: "Verification Broker",
+    name: email.split("@")[0]?.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Local operator",
+    role: "Unverified local session",
     company: "PT Portsync Logistics Systems",
-    licenseNo: "PPJK-BTM-0912-2026",
+    local: true,
   };
   setSession(user);
   return { ok: true };

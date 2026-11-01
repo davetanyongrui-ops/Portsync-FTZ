@@ -1,69 +1,116 @@
-import { Braces, FileCode } from "lucide-react";
+import { Braces, FileCode2, Table2 } from "lucide-react";
 import type { DeclarationTotals } from "../types";
 import { fmtIdr, fmtIdrShort } from "../lib/format";
-import { Btn, Pill } from "./ui";
+import { Btn } from "./ui";
 
 export function ActionFooter({
   totals,
   ready,
+  destination,
   onDownloadXml,
+  onDownloadCsv,
   onOpenPayload,
 }: {
   totals: DeclarationTotals;
   ready: boolean;
+  destination: { treatment: "suspended" | "onward" | "direct"; port: string };
   onDownloadXml: () => void;
+  onDownloadCsv: () => void;
   onOpenPayload: () => void;
 }) {
   const filed = ready && totals.selected > 0;
+  // Duty and tax actually collected here. PPh 22 is a tax prepayment, shown apart.
+  const collected = totals.payable - totals.pph22;
+  const suspended = destination.treatment === "suspended";
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-800 shadow-xs backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95 dark:text-zinc-100 dark:shadow-lg sm:px-5">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-t border-line bg-surface px-3 py-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
         <div className="leading-tight">
-          <div className="text-[10.5px] font-medium tracking-wider text-slate-500 uppercase dark:text-zinc-400">Lines filed</div>
-          <div className="tnum mt-1 text-[13px] font-semibold text-slate-900 dark:text-zinc-100">
+          <div className="text-[9.5px] font-semibold tracking-[0.07em] text-ink-3 uppercase">Lines filed</div>
+          <div className="tnum mt-0.5 font-mono text-[12px] text-ink">
             {ready ? `${totals.selected}/${totals.lines}` : "—"}
           </div>
         </div>
         <div className="leading-tight">
-          <div className="text-[10.5px] font-medium tracking-wider text-slate-500 uppercase dark:text-zinc-400">Payable</div>
+          <div className="text-[9.5px] font-semibold tracking-[0.07em] text-ink-3 uppercase">Payable</div>
           <div
             className={
               filed
-                ? totals.payable === 0
-                  ? "tnum mt-1 text-[13px] font-semibold text-emerald-700 dark:text-emerald-400"
-                  : "tnum mt-1 text-[13px] font-semibold text-amber-700 dark:text-amber-400"
-                : "tnum mt-1 text-[13px] font-semibold text-slate-900 dark:text-zinc-100"
+                ? collected === 0
+                  ? "tnum mt-0.5 font-mono text-[12px] text-ok"
+                  : "tnum mt-0.5 font-mono text-[12px] text-warn"
+                : "tnum mt-0.5 font-mono text-[12px] text-ink"
+            }
+            title={
+              filed
+                ? `${fmtIdr(collected)} of duty and tax at ${destination.port}; PPh 22 ${fmtIdr(totals.pph22)} is credited separately`
+                : undefined
             }
           >
-            {filed ? fmtIdr(totals.payable) : "—"}
+            {filed ? fmtIdrShort(collected) : "—"}
           </div>
         </div>
-        <div className="leading-tight">
-          <div className="text-[10.5px] font-medium tracking-wider text-slate-500 uppercase dark:text-zinc-400">FTZ saving</div>
-          <div className="tnum mt-1 text-[13px] font-semibold text-emerald-700 dark:text-emerald-400">
-            {filed ? fmtIdrShort(totals.saved) : "—"}
+        <div className="hidden leading-tight sm:block">
+          <div className="text-[9.5px] font-semibold tracking-[0.07em] text-ink-3 uppercase">
+            {suspended ? "Held in zone" : "FTA saved"}
+          </div>
+          <div
+            className="tnum mt-0.5 font-mono text-[12px] text-ok"
+            title={
+              filed
+                ? suspended
+                  ? `${fmtIdr(totals.deferred)} not collected while the goods stay in the KPBPB`
+                  : `${fmtIdr(totals.prefSaved)} of Bea Masuk avoided by the preferential rate`
+                : undefined
+            }
+          >
+            {filed ? fmtIdrShort(suspended ? totals.deferred : totals.prefSaved) : "—"}
           </div>
         </div>
-        <div className="hidden sm:block leading-tight">
-          <div className="text-[10.5px] font-medium tracking-wider text-slate-500 uppercase dark:text-zinc-400">Avg match</div>
-          <div className="tnum mt-1 text-[13px] font-semibold text-blue-600 dark:text-cyan-300">
+        <div className="hidden leading-tight md:block">
+          <div className="text-[9.5px] font-semibold tracking-[0.07em] text-ink-3 uppercase">Avg match</div>
+          <div className="tnum mt-0.5 font-mono text-[12px] text-ink-2">
             {filed ? `${Math.round(totals.avgConfidence * 100)}%` : "—"}
           </div>
         </div>
         {filed && totals.blocked > 0 && (
-          <Pill tone="bad" title="Pre-border Lartas lines must carry a permit number before the PIB can be submitted.">
-            {totals.blocked} blocked
-          </Pill>
+          <div
+            className="leading-tight"
+            title="Pre-border lartas lines need a permit number before the PIB can be submitted"
+          >
+            <div className="text-[9.5px] font-semibold tracking-[0.07em] text-ink-3 uppercase">Blocked</div>
+            <div className="tnum mt-0.5 flex items-center gap-1 font-mono text-[12px] text-bad">
+              <span className="inline-block size-[5px] rounded-full bg-bad" />
+              {totals.blocked}
+            </div>
+          </div>
         )}
       </div>
 
-      <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-3">
-        <Btn icon={FileCode} onClick={onDownloadXml} disabled={!filed} title="CEISA-flavoured interchange document" className="w-full sm:w-auto">
-          Download CEISA-Ready XML
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+        <Btn
+          size="sm"
+          variant="ghost"
+          icon={Table2}
+          onClick={onDownloadCsv}
+          disabled={!filed}
+          title="Line schedule with the per-line duty split"
+        >
+          <span className="hidden sm:inline">CSV</span>
         </Btn>
-        <Btn variant="primary" icon={Braces} onClick={onOpenPayload} disabled={!filed} className="w-full sm:w-auto">
-          Generate PPFTZ-01 Declaration Payload
+        <Btn
+          size="sm"
+          variant="secondary"
+          icon={FileCode2}
+          onClick={onDownloadXml}
+          disabled={!filed}
+          title="CEISA-flavoured interchange document"
+        >
+          <span className="hidden sm:inline">Download</span> XML
+        </Btn>
+        <Btn size="sm" variant="primary" icon={Braces} onClick={onOpenPayload} disabled={!filed}>
+          Generate payload
         </Btn>
       </div>
     </div>

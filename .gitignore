@@ -1,9 +1,16 @@
 node_modules/
 dist/
 .qa/
+.qa-test/
+.qa-responsive/
+.qa2/
 server/node_modules/
 server/.env
 *.log
 .vercel
 .env*
 !.env.example
+tmp/
+public/pdf.worker.mjs
+.qa-sources/
+.workbuddy-ai/

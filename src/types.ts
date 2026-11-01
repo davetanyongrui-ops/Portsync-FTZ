@@ -7,7 +7,8 @@ export type LartasLevel = "NONE" | "POST_BORDER" | "PRE_BORDER";
 
 export type RiskTier = "LOW" | "MEDIUM" | "HIGH";
 
-export type Uom = "PCE" | "KGM" | "SET" | "MTR" | "CTN" | "PAK";
+/** Statistical units used by BTKI. M2 and LTR appear on tiles, glass and liquids. */
+export type Uom = "PCE" | "KGM" | "SET" | "MTR" | "M2" | "LTR" | "CTN" | "PAK";
 
 export interface PermitRequirement {
   agency: string;
@@ -33,6 +34,12 @@ export interface BtkiEntry {
   uom: Uom;
   /** MFN Bea Masuk. */
   bmMfn: number;
+  /** Lowest rate in the six-digit subheading, when its national lines differ. */
+  bmMin?: number;
+  /** Ceiling of that band — the rate used for calculation. */
+  bmMax?: number;
+  /** False when the subheading splits into lines at different rates. */
+  bmExact?: boolean;
   /** Preferential rate under ACFTA (Form D) / ATIGA (Form E). */
   bmAcf: number;
   bmAsean: number;
@@ -131,7 +138,19 @@ export interface DutySplit {
   total: number;
 }
 
-export type BadgeKind = "facility" | "lartas-post" | "lartas-pre" | "sni" | "ad" | "tkdn" | "tpbd" | "excise" | "asset";
+export type BadgeKind =
+  | "facility"
+  | "lartas-post"
+  | "lartas-pre"
+  | "sni"
+  | "ad"
+  | "tkdn"
+  | "tpbd"
+  | "excise"
+  | "asset"
+  | "unclassified"
+  | "preference"
+  | "rate-range";
 
 export interface RegulatoryBadge {
   kind: BadgeKind;
@@ -143,6 +162,7 @@ export interface LineCalc {
   id: string;
   pos: number;
   line: InvoiceLine;
+  /** The heading applied. `unclassified` marks the placeholder used when none matched. */
   entry: BtkiEntry;
   /** Effective HS after any broker override. */
   hs: string;
@@ -153,8 +173,18 @@ export interface LineCalc {
   unitCifUsd: number;
   usdCif: number;
   idrCif: number;
-  /** Applicable MFN BM rate after origin screening. */
+  /** MFN Bea Masuk before any preference — the comparison base. */
+  bmMfnRate: number;
+  /** Rate actually applied on release: MFN, or the scheme rate when one applies. */
   bmRate: number;
+  /** Free-trade preference that applies to this origin, when one does. */
+  pref?: {
+    scheme: string;
+    form: string;
+    rate: number;
+    /** Rupiah saved against MFN on this line. */
+    saved: number;
+  };
   bmadRate: number;
   ppnbmRate: number;
   ppnRate: number;
@@ -162,6 +192,8 @@ export interface LineCalc {
   ftz: DutySplit;
   /** Duty & tax avoided by the FTZ facility. */
   saved: number;
+  /** Held back by the zone facility rather than eliminated. */
+  deferred: number;
   /** Still owed after the facility. */
   payable: number;
   pph22: number;
@@ -170,12 +202,16 @@ export interface LineCalc {
   badges: RegulatoryBadge[];
   risk: RiskTier;
   blocked: boolean;
+  /** No heading in the register matched — duty cannot be computed honestly. */
+  unclassified: boolean;
+  /** The six-digit subheading splits into lines at different rates. */
+  rateExact: boolean;
   /** Compliance rule flags */
   ftz_exemption_eligible: boolean;
   isExcise: boolean;
   isAsset: boolean;
   hasMasterlist?: boolean;
-  /** Preferential option the agent identified but did not apply to the headline comparator. */
+  /** Preferential option the agent identified. */
   fta: { scheme: string; bmRate: number; deltaVsMfn: number };
 }
 
@@ -190,10 +226,21 @@ export interface DeclarationTotals {
   selIdrCif: number;
   standard: DutySplit;
   ftz: DutySplit;
+  /** Duty the free-zone facility holds back. */
   saved: number;
+  /** Held back by the facility but still owed if the goods leave the zone. */
+  deferred: number;
+  /** Duty cut by an FTA preference on the selected lines. */
+  prefSaved: number;
+  /** Bea Masuk at MFN with no preference — the worst case for comparison. */
+  mfnDuty: number;
   payable: number;
   pph22: number;
   highRisk: number;
   blocked: number;
+  /** Lines with no heading in the register. */
+  unclassified: number;
+  /** Lines whose six-digit subheading spans several rates. */
+  rateUncertain: number;
   avgConfidence: number;
 }

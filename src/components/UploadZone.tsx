@@ -1,71 +1,57 @@
 import { useRef, useState, type DragEvent, type KeyboardEvent } from "react";
-import { CloudUpload, FileText, Image as ImageIcon, Paperclip, X } from "lucide-react";
+import { FileText, Image as ImageIcon, Loader2, Upload, X } from "lucide-react";
 import { cn } from "../lib/cn";
-import { Label } from "./ui";
-import { extractPdfText } from "../lib/pdf";
+import type { ExtractProgress } from "../lib/ocr";
 
 export interface UploadedFile {
   name: string;
   sizeKb: number;
   mime: string;
-  extractedText?: string;
+  pages?: number;
+  /** How the text was obtained, shown so the user knows an OCR ran. */
+  method?: "text-layer" | "ocr" | "mixed";
 }
 
-const ACCEPTED = ["application/pdf", "image/png", "image/jpeg"];
+const ACCEPTED = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
 const MAX_KB = 25_000;
 
 export function UploadZone({
   file,
-  onFile,
+  reading,
+  onPick,
   onClear,
   onReject,
 }: {
   file: UploadedFile | null;
-  onFile: (f: UploadedFile) => void;
+  reading?: ExtractProgress | null;
+  onPick: (file: File) => void;
   onClear: () => void;
   onReject: (message: string) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const take = async (list: FileList | null) => {
+  const take = (list: FileList | null) => {
     const f = list?.[0];
     if (!f) return;
-    const okType = ACCEPTED.includes(f.type) || /\.(pdf|png|jpe?g)$/i.test(f.name);
+    const okType = ACCEPTED.includes(f.type) || /\.(pdf|png|jpe?g|webp)$/i.test(f.name);
     if (!okType) {
-      onReject(`${f.name}: unsupported type. Accepted PDF, PNG, JPG.`);
+      onReject(`${f.name}: unsupported type. Accepted formats are PDF, PNG, JPG and WEBP.`);
       return;
     }
     const sizeKb = Math.round(f.size / 1024);
     if (sizeKb > MAX_KB) {
-      onReject(`${f.name}: ${sizeKb} kB exceeds the 25 MB document cap.`);
+      onReject(`${f.name}: ${sizeKb.toLocaleString("en-US")} kB exceeds the 25 MB document cap.`);
       return;
     }
-    const base = { name: f.name, sizeKb, mime: f.type || "application/octet-stream" };
-
-    // Johor fixture drop test in scripts/qa.mjs
-    if (f.name.toLowerCase().includes("johor")) {
-      onFile(base);
-      return;
-    }
-
-    if (/\.pdf$/i.test(f.name)) {
-      try {
-        const txt = await extractPdfText(f);
-        onFile({ ...base, extractedText: txt || "" });
-      } catch {
-        onFile(base);
-      }
-    } else {
-      onFile(base);
-    }
+    onPick(f);
   };
 
   const picker = (
     <input
       ref={inputRef}
       type="file"
-      accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+      accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
       className="sr-only"
       onChange={(e) => {
         take(e.target.files);
@@ -77,18 +63,21 @@ export function UploadZone({
   const dropProps = {
     onDragOver: (e: DragEvent) => {
       e.preventDefault();
-      setDragging(true);
+      if (!reading) setDragging(true);
     },
     onDragLeave: () => setDragging(false),
     onDrop: (e: DragEvent) => {
       e.preventDefault();
       setDragging(false);
-      take(e.dataTransfer.files);
+      if (!reading) take(e.dataTransfer.files);
     },
-    onClick: () => inputRef.current?.click(),
+    onClick: () => {
+      if (!reading) inputRef.current?.click();
+    },
     role: "button" as const,
-    tabIndex: 0,
+    tabIndex: reading ? -1 : 0,
     onKeyDown: (e: KeyboardEvent) => {
+      if (reading) return;
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         inputRef.current?.click();
@@ -96,27 +85,71 @@ export function UploadZone({
     },
   };
 
-  if (file) {
-    const isPdf = /pdf/i.test(file.mime + file.name);
+  /* ---- reading in progress ---- */
+  if (reading) {
     return (
       <div>
-        <Label className="mb-2">Source Document</Label>
+        {picker}
+        <div className="rounded-[5px] border border-brand/40 bg-brand-soft px-2.5 py-2">
+          <div className="flex items-center gap-2">
+            <Loader2 size={12} className="animate-spin text-brand" />
+            <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-ink">
+              {reading.label}
+            </span>
+            <span className="tnum shrink-0 font-mono text-[10px] text-ink-2">
+              {Math.round(reading.pct * 100)}%
+            </span>
+          </div>
+          <div className="mt-1.5 h-[2px] overflow-hidden rounded-full bg-brand/20">
+            <div
+              className="h-full bg-brand transition-[width] duration-300"
+              style={{ width: `${Math.max(3, Math.round(reading.pct * 100))}%` }}
+            />
+          </div>
+          {reading.phase === "recognise" && (
+            <p className="mt-1 font-mono text-[9.5px] text-ink-3">
+              Scanned page · running Tesseract OCR
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ---- a document is staged ---- */
+  if (file) {
+    const isPdf = /pdf/i.test(file.mime + file.name);
+    const methodLabel =
+      file.method === "ocr"
+        ? "OCR"
+        : file.method === "mixed"
+          ? "text + OCR"
+          : file.method === "text-layer"
+            ? "text layer"
+            : null;
+
+    return (
+      <div>
         {picker}
         <div
           {...dropProps}
           className={cn(
-            "flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-dashed px-3 transition-colors shadow-2xs",
-            dragging
-              ? "border-emerald-500/70 bg-emerald-50 dark:bg-emerald-500/10"
-              : "border-slate-300 bg-white hover:border-slate-400 dark:border-zinc-700 dark:bg-zinc-900/60 dark:hover:border-zinc-500",
+            "flex h-10 w-full cursor-pointer items-center gap-2 rounded-[5px] border px-2 transition-colors",
+            dragging ? "border-brand bg-brand-soft" : "border-line-strong bg-surface hover:border-ink-3",
           )}
         >
-          <span className="grid size-6 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-100 text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-cyan-400">
-            {isPdf ? <FileText size={12} /> : <ImageIcon size={12} />}
+          <span className="grid size-5 shrink-0 place-items-center rounded-[3px] bg-sunken text-ink-2">
+            {isPdf ? <FileText size={11} /> : <ImageIcon size={11} />}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-slate-900 dark:text-zinc-200">{file.name}</span>
-          <span className="tnum hidden shrink-0 text-[11px] text-slate-500 sm:inline dark:text-zinc-400">
-            {file.sizeKb.toLocaleString("en-US")} kB · staged locally
+          <span className="min-w-0 flex-1 truncate text-[12px] text-ink">{file.name}</span>
+          {methodLabel && (
+            <span className="hidden shrink-0 rounded-[2px] bg-sunken px-1 font-mono text-[9px] tracking-wide text-ink-3 uppercase sm:inline">
+              {methodLabel}
+            </span>
+          )}
+          <span className="tnum hidden shrink-0 font-mono text-[10px] text-ink-3 sm:inline">
+            {file.pages ? `${file.pages}p · ` : ""}
+            {file.sizeKb.toLocaleString("en-US")} kB
           </span>
           <button
             type="button"
@@ -124,39 +157,36 @@ export function UploadZone({
               e.stopPropagation();
               onClear();
             }}
-            className="grid size-6 shrink-0 place-items-center rounded-md border border-slate-200 text-slate-400 transition-colors hover:border-rose-400 hover:text-rose-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-rose-400 dark:hover:text-rose-400 cursor-pointer"
+            className="grid size-5 shrink-0 cursor-pointer place-items-center rounded-[3px] text-ink-3 transition-colors hover:bg-sunken hover:text-bad"
             aria-label="Remove document"
           >
-            <X size={12} />
+            <X size={11} />
           </button>
         </div>
       </div>
     );
   }
 
+  /* ---- empty ---- */
   return (
     <div>
-      <Label className="mb-2">Source Document</Label>
       {picker}
       <div
         {...dropProps}
         className={cn(
-          "group flex items-center gap-3 rounded-xl border border-dashed px-3.5 py-3 text-left transition-colors cursor-pointer shadow-2xs",
-          dragging
-            ? "border-emerald-500/70 bg-emerald-50 dark:bg-emerald-500/10"
-            : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/80",
+          "flex w-full cursor-pointer items-center gap-2.5 rounded-[5px] border border-dashed px-2.5 py-2 text-left transition-colors",
+          dragging ? "border-brand bg-brand-soft" : "border-line-strong bg-surface hover:border-ink-3 hover:bg-sunken/60",
         )}
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-100 text-slate-500 transition-colors group-hover:border-blue-500/40 group-hover:text-blue-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:group-hover:border-cyan-500/40 dark:group-hover:text-cyan-400">
-          <CloudUpload size={17} />
+        <span className="grid size-6 shrink-0 place-items-center rounded-[3px] border border-line bg-sunken text-ink-3">
+          <Upload size={12} strokeWidth={2} />
         </span>
         <span className="min-w-0">
-          <span className="block text-[12.5px] font-medium text-slate-900 dark:text-zinc-200">
-            {dragging ? "Release to stage the document" : "Drop invoice or shipping manifest"}
+          <span className="block text-[12px] text-ink">
+            {dragging ? "Release to read" : "Drop an invoice, packing list or scan"}
           </span>
-          <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            <Paperclip size={11} className="text-slate-400 dark:text-zinc-500" />
-            PDF, PNG, JPG up to 25 MB — or pick a fixture below
+          <span className="block font-mono text-[10px] text-ink-3">
+            PDF · PNG · JPG — OCR runs on scans
           </span>
         </span>
       </div>

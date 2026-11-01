@@ -1,179 +1,243 @@
 import { useState } from "react";
-import { CheckCircle2, Mail, MapPin, MessageSquare, Phone, Send, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
+import { Btn, FIELD, Label } from "./ui";
+import { SiteFooter } from "./SiteFooter";
+import { KPB } from "../data/constants";
+import type { Page } from "../App";
 
-export function ContactPage({ onNavigate }: { onNavigate: (p: any) => void }) {
+const TOPICS = [
+  "Evaluate the engine",
+  "Broker desk subscription",
+  "Facility / private deployment",
+  "Customs rules question",
+  "Something is wrong",
+];
+
+export function ContactPage({
+  onNavigate,
+  onOpenLegal,
+}: {
+  onNavigate: (p: Page) => void;
+  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+}) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [org, setOrg] = useState("");
+  const [topic, setTopic] = useState(TOPICS[0]!);
   const [message, setMessage] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [sent, setSent] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    const next: Record<string, string> = {};
+    if (name.trim().length < 2) next.name = "Enter a name we can reply to.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) next.email = "That address does not look complete.";
+    if (message.trim().length < 12) next.message = "A sentence or two about the consignment helps.";
+    setErrors(next);
+    if (Object.keys(next).length) return;
+
+    const body = [
+      `Name: ${name.trim()}`,
+      `Email: ${email.trim()}`,
+      org.trim() ? `Organisation: ${org.trim()}` : null,
+      `Topic: ${topic}`,
+      "",
+      message.trim(),
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const href = `mailto:customs@portsync.id?subject=${encodeURIComponent(
+      `[${topic}] ${org.trim() || name.trim()}`,
+    )}&body=${encodeURIComponent(body)}`;
+
+    setSent(href);
+  };
+
+  const reset = () => {
+    setSent(null);
+    setMessage("");
+    setErrors({});
   };
 
   return (
-    <div className="scroll-thin flex min-h-0 flex-1 flex-col overflow-y-auto bg-slate-50 text-slate-800 antialiased dark:bg-zinc-950 dark:text-zinc-100">
-      <section className="mx-auto w-full shrink-0 max-w-5xl px-6 py-12">
-        <div className="text-center max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-50 px-3.5 py-1 text-xs font-semibold text-blue-700 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300">
-            <MessageSquare size={13} /> Support &amp; Deployment Desk
-          </div>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-            Get in Touch with PortSync FTZ
-          </h1>
-          <p className="mt-3 text-[14.5px] text-slate-600 dark:text-zinc-400">
-            Have questions about custom BTKI tariff integration, CEISA 4.0 pipelines, or enterprise deployments in Batam?
+    <div className="bg-paper">
+      <section className="mx-auto grid max-w-[1040px] grid-cols-1 gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-16">
+        <div>
+          <div className="font-mono text-[10px] tracking-[0.1em] text-ink-3 uppercase">Contact</div>
+          <h1 className="display mt-3 text-[30px] text-ink sm:text-[34px]">Tell us what you are clearing</h1>
+          <p className="mt-3 max-w-[460px] text-[12.5px] leading-[1.65] text-ink-2">
+            A commodity, a volume and a port is usually enough to say whether the engine fits. If you already have an
+            invoice with a line that keeps getting reclassified, send that.
           </p>
-        </div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-12 items-start">
-          {/* Contact Details */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
-              <div className="flex items-center gap-3">
-                <div className="grid size-9 place-items-center rounded-lg border border-blue-500/30 bg-blue-50 text-blue-600 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400">
-                  <MapPin size={17} />
-                </div>
-                <div>
-                  <div className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">Batam Logistics Hub</div>
-                  <div className="text-[11px] text-slate-500 dark:text-zinc-400">KPBPB Free Trade Zone Enclave</div>
-                </div>
+          {sent ? (
+            <div className="mt-8 rounded-[7px] border border-line bg-surface p-5">
+              <div className="flex items-center gap-2">
+                <span className="grid size-5 place-items-center rounded-full bg-ok-soft text-ok">
+                  <Check size={11} strokeWidth={3} />
+                </span>
+                <span className="text-[12.5px] font-medium text-ink">Message prepared</span>
               </div>
-              <p className="mt-3 text-[12.5px] text-slate-600 leading-relaxed dark:text-zinc-400">
-                Kawasan Industri Batamindo &amp; Pelabuhan Batu Ampar, Batam, Kepulauan Riau 29433, Indonesia
+              <p className="mt-2 text-[11.5px] leading-[1.65] text-ink-2">
+                This build has no mail server, so the message was handed to your mail client instead of being posted
+                silently. If nothing opened, use the link below.
               </p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
-              <div className="flex items-center gap-3">
-                <div className="grid size-9 place-items-center rounded-lg border border-blue-500/30 bg-blue-50 text-blue-600 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400">
-                  <Mail size={17} />
-                </div>
-                <div>
-                  <div className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">Electronic Mail</div>
-                  <div className="text-[11px] text-slate-500 dark:text-zinc-400">24/7 Monitored Dispatch</div>
-                </div>
-              </div>
-              <div className="mt-3 font-mono text-[12px] text-blue-700 dark:text-cyan-300">
-                ops@portsync-ftz.io · customs@portsync.id
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
-              <div className="flex items-center gap-3">
-                <div className="grid size-9 place-items-center rounded-lg border border-blue-500/30 bg-blue-50 text-blue-600 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400">
-                  <Phone size={17} />
-                </div>
-                <div>
-                  <div className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">Direct Broker Hotline</div>
-                  <div className="text-[11px] text-slate-500 dark:text-zinc-400">WIB (Western Indonesia Time)</div>
-                </div>
-              </div>
-              <div className="mt-3 font-mono text-[12px] text-slate-700 dark:text-zinc-300">
-                +62 (778) 412-9800 · WhatsApp: +62 811-7788-0912
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-50 p-4 dark:bg-emerald-500/10">
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-400">
-                <ShieldCheck size={14} /> Customs Emergency Clearing Desk
-              </div>
-              <p className="mt-1 text-[11.5px] text-emerald-700 leading-relaxed dark:text-emerald-400/80">
-                Operating 24/7 at Batu Ampar Port (POD: IDBTM) for rapid document rectification during vessel berthing.
-              </p>
-            </div>
-          </div>
-
-          {/* Inquiry Form */}
-          <div className="lg:col-span-7 rounded-2xl border border-slate-200 bg-white p-6 shadow-md dark:border-zinc-800 dark:bg-zinc-900/80">
-            {submitted ? (
-              <div className="py-12 text-center">
-                <div className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-400">
-                  <CheckCircle2 size={24} />
-                </div>
-                <h3 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Inquiry Received</h3>
-                <p className="mt-2 text-sm text-slate-600 max-w-sm mx-auto dark:text-zinc-400">
-                  Thank you, <span className="text-slate-900 font-semibold dark:text-zinc-200">{name}</span>. A licensed PortSync customs specialist will review your request and reply shortly.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => { setSubmitted(false); setMessage(""); }}
-                  className="mt-6 rounded-lg border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 cursor-pointer dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a
+                  href={sent}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-[5px] border border-ink bg-ink px-3 text-[12px] font-medium text-paper"
                 >
-                  Send another inquiry
-                </button>
+                  Open in mail client <ArrowRight size={12} />
+                </a>
+                <Btn variant="secondary" size="sm" onClick={reset}>
+                  Write another
+                </Btn>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Send Inquiry or Request Demo</h3>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="mt-7 space-y-4" noValidate>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-[12px] font-medium text-slate-700 dark:text-zinc-300">Your Name</label>
+                  <label htmlFor="c-name">
+                    <Label>Name</Label>
+                  </label>
                   <input
-                    type="text"
-                    required
-                    placeholder="e.g. Hendra Setiawan"
+                    id="c-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-cyan-500"
+                    placeholder="Hendra Setiawan"
+                    className={`mt-1.5 ${FIELD}`}
                   />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="text-[12px] font-medium text-slate-700 dark:text-zinc-300">Corporate Email</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="h.setiawan@company.co.id"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-cyan-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[12px] font-medium text-slate-700 dark:text-zinc-300">Organization / Forwarder</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. PT Batam Precision Diecasting"
-                      value={org}
-                      onChange={(e) => setOrg(e.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-cyan-500"
-                    />
-                  </div>
+                  {errors.name && <p className="mt-1 text-[10.5px] text-bad">{errors.name}</p>}
                 </div>
                 <div>
-                  <label className="text-[12px] font-medium text-slate-700 dark:text-zinc-300">Message / Consignment Details</label>
-                  <textarea
-                    rows={4}
-                    required
-                    placeholder="Tell us about your import/export commodities, monthly declaration volume, or required EDI integrations..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-cyan-500 resize-none"
+                  <label htmlFor="c-email">
+                    <Label>Work email</Label>
+                  </label>
+                  <input
+                    id="c-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="h.setiawan@company.co.id"
+                    className={`mt-1.5 ${FIELD}`}
+                  />
+                  {errors.email && <p className="mt-1 text-[10.5px] text-bad">{errors.email}</p>}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="c-org">
+                    <Label>Organisation</Label>
+                  </label>
+                  <input
+                    id="c-org"
+                    value={org}
+                    onChange={(e) => setOrg(e.target.value)}
+                    placeholder="PT Batam Precision Diecasting"
+                    className={`mt-1.5 ${FIELD}`}
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500 transition-colors cursor-pointer shadow-md shadow-blue-500/20 dark:bg-cyan-500 dark:text-zinc-950 dark:hover:bg-cyan-400"
-                >
-                  <Send size={14} /> Send Message to Customs Team
-                </button>
-              </form>
-            )}
-          </div>
+                <div>
+                  <label htmlFor="c-topic">
+                    <Label>Topic</Label>
+                  </label>
+                  <select
+                    id="c-topic"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    className={`mt-1.5 ${FIELD}`}
+                  >
+                    {TOPICS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="c-msg">
+                  <Label>Message</Label>
+                </label>
+                <textarea
+                  id="c-msg"
+                  rows={5}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Commodities, monthly declaration volume, and which port you clear through."
+                  className={`mt-1.5 resize-none ${FIELD}`}
+                />
+                {errors.message && <p className="mt-1 text-[10.5px] text-bad">{errors.message}</p>}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Btn variant="primary" type="submit" iconRight={ArrowRight}>
+                  Prepare message
+                </Btn>
+                <span className="font-mono text-[10px] text-ink-3">no account required</span>
+              </div>
+            </form>
+          )}
         </div>
 
-        <div className="mt-12 text-center border-t border-zinc-800/80 pt-6">
+        <aside className="space-y-6 lg:border-l lg:border-line lg:pl-8">
+          <div>
+            <Label>Batam desk</Label>
+            <p className="mt-2 text-[11.5px] leading-[1.7] text-ink-2">
+              Kawasan Industri Batamindo
+              <br />
+              Mukakuning, Batam 29433
+              <br />
+              Kepulauan Riau, Indonesia
+            </p>
+          </div>
+          <div>
+            <Label>Direct</Label>
+            <dl className="mt-2 space-y-1.5 font-mono text-[11px]">
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-3">customs</dt>
+                <dd className="text-ink-2">customs@portsync.id</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-3">ops</dt>
+                <dd className="text-ink-2">ops@portsync-ftz.io</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-3">tel</dt>
+                <dd className="text-ink-2">+62 778 412 9800</dd>
+              </div>
+            </dl>
+          </div>
+          <div>
+            <Label>Customs office</Label>
+            <p className="mt-2 text-[11px] leading-[1.7] text-ink-2">
+              {KPB.customsOffice}
+              <br />
+              <span className="font-mono text-ink-3">{KPB.code}</span>
+            </p>
+          </div>
+          <div className="rounded-[6px] border border-line bg-surface px-3 py-2.5">
+            <p className="text-[10.5px] leading-[1.6] text-ink-3">
+              We do not give tariff rulings. Classification advice comes from a licensed PPJK; we only show you what the
+              register and the rules say.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => onNavigate("terminal")}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer"
+            className="inline-flex cursor-pointer items-center gap-1.5 text-[11.5px] text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink"
           >
-            ← Or return to the Customs Declaration Terminal
+            Skip the form — open the terminal
           </button>
-        </div>
+        </aside>
       </section>
+
+      <SiteFooter onNavigate={onNavigate} onOpenLegal={onOpenLegal} />
     </div>
   );
 }

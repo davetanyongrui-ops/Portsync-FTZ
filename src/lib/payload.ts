@@ -1,6 +1,7 @@
 import { CEISA, KPB, OPERATOR, PPH22_RATE } from "../data/constants";
 import { FX } from "./fx";
 import type { DeclarationTotals, DemoInvoice, LineCalc } from "../types";
+import type { Destination } from "../data/destinations";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const r0 = (n: number) => Math.round(n);
@@ -25,7 +26,7 @@ export function validationReport(calcs: LineCalc[], totals: DeclarationTotals) {
       blocking.push({
         pos: c.pos,
         code: "EXCISE-BLOCKED",
-        message: `${c.hs} is an Excise Good (Barang Kena Cukai): Ineligible for PPFTZ-01 exemption under PP No. 41/2021. Mandatory excise tax notice applies (10% BM + 11% PPN).`,
+        message: `${c.hs} is an Excise Good (Barang Kena Cukai): ineligible for the PPFTZ-01 free-zone facility under PP 10/2012, because cukai remains due on entry into the KPBPB. Excise notification required before release.`,
       });
     } else if (c.blocked) {
       blocking.push({
@@ -59,6 +60,25 @@ export function validationReport(calcs: LineCalc[], totals: DeclarationTotals) {
   return { blocking, warnings };
 }
 
+
+/**
+ * The declaration header follows the chosen entry point, not a hard-coded Batam
+ * office. A direct import to Belawan is an ordinary PIB — writing PPFTZ-01 into
+ * its payload would describe a facility that is not being used.
+ */
+function facilityFor(d: Destination) {
+  const zone = d.region === "KPBPB";
+  return {
+    jenisKawasan: d.region,
+    kodeKawasan: zone ? KPB.kodeKawasan : "TLDDP",
+    namaKawasan: zone ? KPB.region : "Daerah Pabean Indonesia (TLDDP)",
+    regulator: zone ? KPB.authority : "Direktorat Jenderal Bea dan Cukai",
+    dasarHukum: zone ? KPB.regulation : "UU 17/2006 jo. PMK 26/PMK.010/2022 (BTKI 2022)",
+    formulir: d.regime,
+    kantorPabean: { kode: d.officeCode, nama: d.office },
+  };
+}
+
 export interface PayloadOptions {
   generatedAt: string;
   draft: boolean;
@@ -71,12 +91,14 @@ export function buildPpftzPayload(
   rows: FilingRow[],
   totals: DeclarationTotals,
   opts: PayloadOptions,
+  destination: Destination,
 ) {
+  const facility = facilityFor(destination);
   const report = validationReport(rows, totals);
 
   return {
     meta: {
-      schemaVersion: `${KPB.facilityForm}/4.2`,
+      schemaVersion: `${destination.regime}/4.2`,
       sourceSystem: "PortSync FTZ Agent 1.0.0",
       gateway: `${CEISA.system} ${CEISA.channel}`,
       environment: CEISA.env,
@@ -91,14 +113,10 @@ export function buildPpftzPayload(
       },
     },
     facility: {
-      jenisKawasan: "KPBPB",
-      kodeKawasan: KPB.kodeKawasan,
-      namaKawasan: KPB.region,
-      regulator: KPB.authority,
-      dasarHukum: KPB.regulation,
-      formulir: KPB.facilityForm,
-      kantorPabean: { kode: KPB.code, nama: KPB.customsOffice },
-      nomorPersetujuan: `${KPB.facilityForm}/${inv.id.toUpperCase()}/${inv.docNo}`,
+      ...facility,
+      pelabuhan: { nama: destination.port, kota: destination.city },
+      perlakuan: destination.treatment,
+      nomorPersetujuan: `${facility.formulir}/${inv.id.toUpperCase()}/${inv.docNo}`,
     },
     pengaju: {
       nama: inv.consignee.name,
@@ -138,7 +156,9 @@ export function buildPpftzPayload(
       ppnStandarIdr: r0(totals.standard.ppn),
       totalStandarIdr: r0(totals.standard.total),
       totalFtzIdr: r0(totals.ftz.total),
-      penghematanFasilitasIdr: r0(totals.saved),
+      penghematanFasilitasIdr: r0(totals.deferred),
+      penghematanPreferensiIdr: r0(totals.prefSaved),
+      beaMasukMfnIdr: r0(totals.mfnDuty),
       harusDibayarIdr: r0(totals.payable),
       pp22ImporIdr: r0(totals.pph22),
       rataRataKeyakinanKlasifikasi: r2(totals.avgConfidence),
@@ -175,23 +195,32 @@ export function buildPpftzPayload(
         totalIdr: r0(c.standard.total),
       },
       fasilitasFtz: {
-        kode: KPB.facilityForm,
+        kode: facility.formulir,
         cakupanPersen: r2(c.coverage * 100),
         beaMasukPersen: r2((c.bmRate * (1 - c.coverage)) * 100),
         ppnPersen: r2((c.ppnRate * (1 - c.coverage)) * 100),
         totalHarusDibayarIdr: r0(c.payable),
         penghematanIdr: r0(c.saved),
-        catatan: c.isExcise
-          ? "Barang Kena Cukai (MMEA / Etil Alkohol) — Tidak berhak atas fasilitas pembebasan PPFTZ-01."
-          : c.isAsset && !c.hasMasterlist
-            ? "Aset Non-Produksi / Konsumtif — Dikenakan BM 15% + PPN 11% tanpa Masterlist BP Batam."
-            : c.line.releaseNote ?? "Seluruh nilai barang dimanfaatkan di dalam enklave KPBPB.",
+        catatan: c.unclassified
+          ? "HS belum ditetapkan — bea masuk tidak dapat dihitung."
+          : c.isExcise
+            ? "Barang Kena Cukai — cukai tetap dipungut; tarif spesifik per satuan tidak dimodelkan."
+            : c.line.releaseNote ??
+              (c.coverage === 1
+                ? "Seluruh nilai barang dimanfaatkan di dalam enklave KPBPB."
+                : "Dilepas ke daerah pabean; BM dan PPN terutang atas bagian yang dilepas."),
       },
       opsiPreferensi: {
         skema: c.fta.scheme,
-        beaMasukPersen: r2(c.fta.bmRate * 100),
+        beaMasukMfnPersen: r2(c.bmMfnRate * 100),
+        beaMasukDiterapkanPersen: r2(c.bmRate * 100),
         selisihTerhadapMfnIdr: r0(c.fta.deltaVsMfn),
-        catatan: "Ditampilkan untuk perbandingan; tidak dipakai pada pembanding standar.",
+        diterapkan: Boolean(c.pref),
+        catatan: c.pref
+          ? `Tarif preferensi ${c.pref.scheme} diterapkan menggantikan MFN.`
+          : c.fta.scheme === "MFN"
+            ? "Tidak ada skema preferensi untuk negara asal ini."
+            : `Pos BTKI ini tidak memuat tarif ${c.fta.scheme} pada register; MFN berlaku.`,
       },
       perizinan: {
         lartas: c.lartas,
@@ -228,8 +257,10 @@ export function buildCeisaXml(
   calcs: FilingRow[],
   totals: DeclarationTotals,
   generatedAt: string,
+  destination: Destination,
 ): string {
   const report = validationReport(calcs, totals);
+  const facility = facilityFor(destination);
   const head = (n: number) => `${" ".repeat(n)}`;
 
   const itemXml = calcs
@@ -259,7 +290,7 @@ export function buildCeisaXml(
         `${head(10)}<PPN rate="${r2(c.ppnRate * 100)}">${r0(c.standard.ppn)}</PPN>`,
         `${head(10)}<TotalIDR>${r0(c.standard.total)}</TotalIDR>`,
         `${head(8)}</DutyStandard>`,
-        `${head(8)}<Facility code="${KPB.facilityForm}" coverage="${r2(c.coverage * 100)}">`,
+        `${head(8)}<Facility code="${facility.formulir}" coverage="${r2(c.coverage * 100)}">`,
         `${head(10)}<BeaMasuk rate="${r2(c.bmRate * (1 - c.coverage) * 100)}">${r0(c.ftz.bm)}</BeaMasuk>`,
         `${head(10)}<PPN rate="${r2(c.ppnRate * (1 - c.coverage) * 100)}">${r0(c.ftz.ppn)}</PPN>`,
         `${head(10)}<PayableIDR>${r0(c.payable)}</PayableIDR>`,
@@ -271,7 +302,7 @@ export function buildCeisaXml(
         c.entry.sni
           ? `${head(8)}<SNI standard="${esc(c.entry.sni.standard)}">${esc(c.entry.sni.scope)}</SNI>`
           : `${head(8)}<SNI required="N"/>`,
-        `${head(8)}<Preferential scheme="${esc(c.fta.scheme)}" bmRate="${r2(c.fta.bmRate * 100)}"/>`,
+        `${head(8)}<Preferential scheme="${esc(c.fta.scheme)}" mfn="${r2(c.bmMfnRate * 100)}" applied="${r2(c.bmRate * 100)}" savingIDR="${r0(c.pref?.saved ?? 0)}"/>`,
         `${head(8)}<Risk>${c.risk}</Risk>`,
         `${head(6)}</Item>`,
       ].join("\n");
@@ -290,11 +321,11 @@ export function buildCeisaXml(
     `<CEISA4:DocPPFTZ xmlns:CEISA4="http://www.beacukai.go.id/schema/ceisa4/ppftz" version="4.2.1" environment="${CEISA.env}">`,
     `${head(4)}<Header>`,
     `${head(6)}<ReferenceNumber>${esc(idempotencyKey(inv.docNo, calcs))}</ReferenceNumber>`,
-    `${head(6)}<FormType>${KPB.facilityForm}</FormType>`,
+    `${head(6)}<FormType>${facility.formulir}</FormType>`,
     `${head(6)}<GeneratedAt>${generatedAt}</GeneratedAt>`,
-    `${head(6)}<Office code="${KPB.code}">${esc(KPB.customsOffice)}</Office>`,
-    `${head(6)}<Zone type="KPBPB" code="${KPB.kodeKawasan}">${esc(KPB.region)}</Zone>`,
-    `${head(6)}<LegalBasis>${esc(KPB.regulation)}</LegalBasis>`,
+    `${head(6)}<Office code="${facility.kantorPabean.kode}">${esc(facility.kantorPabean.nama)}</Office>`,
+    `${head(6)}<Zone type="${facility.jenisKawasan}" code="${facility.kodeKawasan}">${esc(facility.namaKawasan)}</Zone>`,
+    `${head(6)}<LegalBasis>${esc(facility.dasarHukum)}</LegalBasis>`,
     `${head(6)}<PPKBM nib="${esc(OPERATOR.nib)}" api="${esc(OPERATOR.api)}">${esc(OPERATOR.company)}</PPKBM>`,
     `${head(4)}</Header>`,
     `${head(4)}<Importer npwp="${esc(inv.consignee.taxId)}" nib="${esc(inv.consignee.nib ?? "")}">`,

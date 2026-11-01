@@ -1,19 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Columns2,
-  FileText,
-  Home,
-  PanelLeftClose,
-  PanelRightClose,
-  UserCheck,
-  Zap,
-} from "lucide-react";
+import { FileText, Table2 } from "lucide-react";
 import { TopBar } from "./components/TopBar";
 import { LeftPanel, PIPELINE, type AnalyzeState } from "./components/LeftPanel";
 import { LoginPage } from "./components/LoginPage";
 import { SignupPage } from "./components/SignupPage";
 import { LegalModal, type LegalDocType } from "./components/LegalModal";
-import { getSession, logOut, demoLogIn, DEFAULT_DEMO_USER, type AuthUser } from "./lib/auth";
+import { getSession, logOut, type AuthUser } from "./lib/auth";
 import type { UploadedFile } from "./components/UploadZone";
 import { RightPanel } from "./components/RightPanel";
 import { PayloadModal, type ModalPayload } from "./components/PayloadModal";
@@ -22,8 +14,11 @@ import { HomePage } from "./components/HomePage";
 import { FeaturesPage } from "./components/FeaturesPage";
 import { PricingPage } from "./components/PricingPage";
 import { ContactPage } from "./components/ContactPage";
-import { DEMO_INVOICES, getInvoice, registerDynamicInvoice } from "./data/fixtures";
-import { parseRawInvoice, createDynamicInvoiceFallback } from "./lib/parser";
+import { SourcesPage } from "./components/SourcesPage";
+import { getInvoice, registerInvoice } from "./data/invoice-store";
+import { parseRawInvoice, type SourceMeta } from "./lib/parser";
+import { extractDocument, type ExtractProgress } from "./lib/ocr";
+import { DEFAULT_DESTINATION, getDestination } from "./data/destinations";
 import { PPN_RATE, PPH22_RATE } from "./data/constants";
 import { FX, refreshFx, subscribeFx } from "./lib/fx";
 import { buildDeclaration, computeLine } from "./lib/engine";
@@ -32,50 +27,12 @@ import { downloadText } from "./lib/download";
 import { fmtIdr, fmtUsd } from "./lib/format";
 import { cn } from "./lib/cn";
 import { getInitialTheme, setThemeInStorage, type Theme } from "./lib/theme";
-import type { Overrides, Regime } from "./lib/engine";
+import type { Overrides } from "./lib/engine";
 
 const FILE_BASE = (docNo: string) => docNo.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
 const selectAllOf = (ids: string[]) => Object.fromEntries(ids.map((id) => [id, true]));
 
-const KEYWORD_FIXTURE: Record<string, string> = {
-  batam: "nx",
-  nexis: "nx",
-  sample: "nx",
-  commercial: "nx",
-  invoice: "nx",
-  customs: "nx",
-  robotics: "nx",
-  agv: "nx",
-  semiconductor: "nx",
-  wafer: "nx",
-  greentech: "gt",
-  shenzhen: "gt",
-  solar: "gt",
-  inverter: "gt",
-  battery: "gt",
-  ess: "gt",
-  johor: "jis",
-  pneumatic: "jis",
-  valve: "jis",
-  spares: "jis",
-  bearing: "jis",
-  sensor: "jis",
-  precision: "smp",
-  machining: "smp",
-  alloy: "smp",
-  singapore: "smp",
-  electronics: "smp",
-};
-
-export type Page = "terminal" | "home" | "features" | "pricing" | "contact" | "login" | "signup";
-
-const NAV_LINKS: { key: Page; label: string; icon?: any }[] = [
-  { key: "terminal", label: "Customs Terminal", icon: Zap },
-  { key: "home", label: "Overview", icon: Home },
-  { key: "features", label: "Features" },
-  { key: "pricing", label: "Pricing" },
-  { key: "contact", label: "Contact" },
-];
+export type Page = "terminal" | "home" | "features" | "pricing" | "contact" | "sources" | "login" | "signup";
 
 function pageFromHash(): Page {
   const h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
@@ -83,6 +40,7 @@ function pageFromHash(): Page {
   if (h === "features") return "features";
   if (h === "pricing") return "pricing";
   if (h === "contact") return "contact";
+  if (h === "sources" || h === "provenance") return "sources";
   if (h === "login") return "login";
   if (h === "signup") return "signup";
   return "terminal";
@@ -91,41 +49,34 @@ function pageFromHash(): Page {
 export default function App() {
   const [user, setUser] = useState<AuthUser | null>(() => getSession());
   const [page, setPage] = useState<Page>(pageFromHash);
-  const [invoiceId, setInvoiceId] = useState(DEMO_INVOICES[0]!.id);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<UploadedFile | null>(null);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [status, setStatus] = useState<AnalyzeState>("staged");
   const [stage, setStage] = useState(0);
   const [overrides, setOverrides] = useState<Overrides>({});
   const [masterlistMap, setMasterlistMap] = useState<Record<string, boolean>>({});
-  const [selectedMap, setSelectedMap] = useState<Record<string, boolean>>(() =>
-    selectAllOf(DEMO_INVOICES[0]!.lines.map((l) => l.id)),
-  );
+  const [selectedMap, setSelectedMap] = useState<Record<string, boolean>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"source" | "declaration">("source");
-  const [viewMode, setViewMode] = useState<"split" | "source" | "declaration">("split");
   const [modal, setModal] = useState<ModalPayload | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [regime, setRegime] = useState<Regime>("PPFTZ-01");
+  const [destinationId, setDestinationId] = useState(DEFAULT_DESTINATION.id);
+  const [reading, setReading] = useState<ExtractProgress | null>(null);
   const [, setFxTick] = useState(0);
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [legalDoc, setLegalDoc] = useState<LegalDocType | null>(null);
 
   useEffect(() => {
     setThemeInStorage(theme);
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.style.colorScheme = theme;
   }, [theme]);
 
-  const toggleTheme = useCallback(() => {
-    setTheme((t) => (t === "light" ? "dark" : "light"));
-  }, []);
+  const toggleTheme = useCallback(() => setTheme((t) => (t === "light" ? "dark" : "light")), []);
 
   const timers = useRef<number[]>([]);
   const toastSeq = useRef(0);
-  const analyzingFileRef = useRef<string | null>(null);
 
   const invoice = useMemo(() => getInvoice(invoiceId), [invoiceId]);
 
@@ -134,9 +85,11 @@ export default function App() {
     [selectedMap],
   );
 
+  const destination = useMemo(() => getDestination(destinationId), [destinationId]);
+
   const { calcs, totals } = useMemo(
-    () => buildDeclaration(invoice, overrides, selectedSet, regime, masterlistMap),
-    [invoice, overrides, selectedSet, regime, masterlistMap],
+    () => buildDeclaration(invoice, overrides, selectedSet, destinationId, masterlistMap),
+    [invoice, overrides, selectedSet, destinationId, masterlistMap],
   );
 
   const rows = useMemo(() => calcs.map((c) => ({ ...c, selected: selectedSet.has(c.id) })), [calcs, selectedSet]);
@@ -144,7 +97,12 @@ export default function App() {
   const pushToast = useCallback((t: Omit<Toast, "id">) => {
     toastSeq.current += 1;
     const id = toastSeq.current;
-    setToasts((prev) => [...prev.slice(-3), { ...t, id }]);
+    // Keep the stack to two and clear it itself — a card that sits over the line
+    // table for ten seconds hides the numbers the user just asked for.
+    setToasts((prev) => [...prev.slice(-1), { ...t, id }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((x) => x.id !== id));
+    }, 6000);
   }, []);
 
   const dismissToast = useCallback((id: number) => {
@@ -175,32 +133,16 @@ export default function App() {
     setPage(p);
   }, []);
 
-  const pickInvoice = useCallback(
-    (id: string) => {
-      clearTimers();
-      analyzingFileRef.current = null;
-      const next = getInvoice(id);
-      setInvoiceId(id);
-      setOverrides({});
-      setMasterlistMap({});
-      setSelectedMap(selectAllOf(next.lines.map((l) => l.id)));
-      setActiveId(null);
-      setStage(0);
-      setStatus("staged");
-      setRegime("PPFTZ-01");
-    },
-    [clearTimers],
-  );
-
   const triggerAnalysis = useCallback(
-    (targetId: string, customFileName?: string) => {
-      clearTimers();
+    (targetId: string, customFileName?: string, quiet = false) => {
       const currentInv = getInvoice(targetId);
+      if (!currentInv) return;
+      clearTimers();
       setStatus("analyzing");
       setStage(0);
       setActiveId(null);
 
-      const step = 200;
+      const step = 150;
       for (let i = 1; i <= PIPELINE.length; i += 1) {
         timers.current.push(window.setTimeout(() => setStage(i), i * step));
       }
@@ -208,30 +150,37 @@ export default function App() {
         window.setTimeout(() => {
           setStatus("ready");
           setSelectedMap(selectAllOf(currentInv.lines.map((l) => l.id)));
-          const defaultCalcs = buildDeclaration(currentInv, {}, new Set(currentInv.lines.map((l) => l.id)), regime);
+          const defaultCalcs = buildDeclaration(
+            currentInv,
+            {},
+            new Set(currentInv.lines.map((l) => l.id)),
+            destinationId,
+          );
           const report = validationReport(defaultCalcs.calcs, defaultCalcs.totals);
+          // The upload path already reported what it read; a second toast for the
+          // same action just covers the table the user is trying to read.
+          if (quiet) return;
           pushToast({
-            tone: "good",
-            title: customFileName
-              ? `✓ Extraction complete: ${customFileName} — ${currentInv.lines.length} line items mapped`
-              : `Analysis complete — ${currentInv.lines.length} line items mapped to BTKI`,
-            detail: `${report.blocking.length} blocking · ${report.warnings.length} warnings · standard duty ${fmtIdr(
-              defaultCalcs.totals.standard.total,
-            )}, of which ${fmtIdr(defaultCalcs.totals.saved)} avoided under PPFTZ-01.`,
+            tone: "ok",
+            title: `${currentInv.lines.length} lines classified`,
+            detail: `${customFileName ? `${customFileName} · ` : ""}${report.blocking.length} blocking · ${
+              report.warnings.length
+            } warnings · ${fmtIdr(defaultCalcs.totals.payable - defaultCalcs.totals.pph22)} payable on this filing set.`,
           });
-        }, PIPELINE.length * step + 220),
+        }, PIPELINE.length * step + 200),
       );
     },
-    [clearTimers, regime, pushToast],
+    [clearTimers, destinationId, pushToast],
   );
 
   const analyze = useCallback(() => {
-    triggerAnalysis(invoiceId);
+    if (invoiceId) triggerAnalysis(invoiceId);
   }, [triggerAnalysis, invoiceId]);
 
   const resetOverrides = useCallback(() => {
     setOverrides({});
     setMasterlistMap({});
+    if (!invoice) return;
     setSelectedMap(selectAllOf(invoice.lines.map((l) => l.id)));
     setActiveId(null);
     pushToast({
@@ -243,15 +192,16 @@ export default function App() {
 
   const toggleMasterlist = useCallback(
     (id: string) => {
+      if (!invoice) return;
       setMasterlistMap((prev) => {
         const next = !prev[id];
         const line = invoice.lines.find((l) => l.id === id);
         pushToast({
-          tone: next ? "good" : "warn",
-          title: next ? "BP Batam Masterlist Applied" : "Masterlist Exemption Removed",
+          tone: next ? "ok" : "warn",
+          title: next ? "BP Batam masterlist applied" : "Masterlist exemption removed",
           detail: next
-            ? `POS ${line?.pos ?? ""} granted 100% duty & PPN suspension under approved Masterlist.`
-            : `POS ${line?.pos ?? ""} reverted to restricted exemption (15% BM + 11% PPN).`,
+            ? `POS ${line?.pos ?? ""} granted 100% duty and PPN suspension under an approved masterlist.`
+            : `POS ${line?.pos ?? ""} reverted to the restricted exemption (15% BM + 11% PPN).`,
         });
         return { ...prev, [id]: next };
       });
@@ -264,77 +214,111 @@ export default function App() {
   }, []);
 
   const selectAll = useCallback(
-    (on: boolean) => {
-      setSelectedMap(Object.fromEntries(invoice.lines.map((l) => [l.id, on])));
-    },
+    (on: boolean) =>
+      setSelectedMap(invoice ? Object.fromEntries(invoice.lines.map((l) => [l.id, on])) : {}),
     [invoice],
   );
 
   const overrideLine = useCallback(
     (id: string, hs: string) => {
+      if (!invoice) return;
       const line = invoice.lines.find((l) => l.id === id);
       if (!line) return;
       setOverrides((prev) => ({ ...prev, [id]: hs }));
       if (hs === line.hs) return;
-      const before = computeLine(line, undefined, regime);
-      const after = computeLine(line, hs, regime);
+      const ctx = { treatment: destination.treatment };
+      const before = computeLine(line, undefined, ctx);
+      const after = computeLine(line, hs, ctx);
       pushToast({
         tone: "warn",
         title: `POS ${line.pos} re-mapped to ${hs}`,
         detail: `Standard duty ${fmtIdr(before.standard.total)} → ${fmtIdr(after.standard.total)}; payable after facility ${fmtIdr(after.payable)}.`,
       });
     },
-    [invoice, pushToast, regime],
+    [invoice, pushToast, destination],
   );
 
   const handleUpload = useCallback(
-    (f: UploadedFile) => {
-      setUploaded(f);
-      const isJohor = f.name.toLowerCase().includes("johor");
+    async (file: File) => {
+      setReading({ phase: "reading", label: "Opening the document", pct: 0.01 });
+      try {
+        const doc = await extractDocument(file, setReading);
 
-      if (isJohor) {
-        const text = `${f.name} ${f.extractedText || ""}`.toLowerCase();
-        const hit = Object.keys(KEYWORD_FIXTURE).find((k) => text.includes(k));
-        const target = hit ? KEYWORD_FIXTURE[hit]! : "jis";
-        if (target !== invoiceId) pickInvoice(target);
-        pushToast({
-          tone: "brand",
-          title: `${f.name} staged locally`,
-          detail: `Parsed against the ${getInvoice(target).label.split(" — ")[0]} fixture grammar — this build ships no OCR backend.`,
+        const meta: SourceMeta = {
+          fileName: file.name,
+          sizeKb: Math.round(file.size / 1024),
+          pages: doc.pages,
+          kind: /\.pdf$/i.test(file.name) ? "PDF" : "PNG",
+          method: doc.method,
+        };
+
+        const parsed = parseRawInvoice(doc.text, meta);
+
+        if (!parsed) {
+          // Nothing readable came out. Say exactly that — and touch no state,
+          // so the previous consignment stays loaded *consistently*: showing
+          // the failed file's name above the old document's declaration is
+          // how "nothing to declare" became "which document am I looking at".
+          pushToast({
+            tone: "bad",
+            title: `Nothing to declare in ${file.name}`,
+            detail:
+              doc.text.trim().length < 40
+                ? "No text was recovered from this file, even with OCR. Check the scan is legible and upright."
+                : "Text was recovered but no item table could be found — no line with a quantity and a unit. The previous consignment is still loaded.",
+          });
+          return;
+        }
+
+        setSourceFile(file);
+        setUploaded({
+          name: file.name,
+          sizeKb: meta.sizeKb,
+          mime: file.type || "application/octet-stream",
+          pages: doc.pages,
+          method: doc.method,
         });
-        return;
-      }
 
-      // Autonomous Document Digitization & BTKI Tariff Engine
-      let parsed = parseRawInvoice(f.extractedText || "", f.name);
-      if (!parsed || parsed.lines.length === 0) {
-        parsed = createDynamicInvoiceFallback(f.name);
-      }
+        registerInvoice(parsed);
+        clearTimers();
+        setInvoiceId(parsed.id);
+        setOverrides({});
+        setMasterlistMap({});
+        setSelectedMap(selectAllOf(parsed.lines.map((l) => l.id)));
+        setActiveId(null);
 
-      registerDynamicInvoice(parsed);
-      const targetId = parsed.id;
+        const unclassified = parsed.lines.filter((l) => !l.hs).length;
+        const lowConfidence = parsed.lines.filter((l) => l.hs && l.confidence < 0.7).length;
 
-      clearTimers();
-      const next = getInvoice(targetId);
-      setInvoiceId(targetId);
-      setOverrides({});
-      setSelectedMap(selectAllOf(next.lines.map((l) => l.id)));
-      setActiveId(null);
-      setRegime("PPFTZ-01");
+        pushToast({
+          tone: unclassified ? "warn" : "brand",
+          title: `${parsed.lines.length} line${parsed.lines.length > 1 ? "s" : ""} read from ${file.name}`,
+          detail:
+            (doc.method === "ocr"
+              ? "Recognised by OCR — check the figures against the original. "
+              : doc.method === "mixed"
+                ? "Some pages were scanned and read by OCR. "
+                : "") +
+            (unclassified
+              ? `${unclassified} line(s) matched no heading and need an HS code.`
+              : lowConfidence
+                ? `${lowConfidence} line(s) below 70% confidence need a decision.`
+                : "Every line matched a heading in the register."),
+        });
 
-      pushToast({
-        tone: "brand",
-        title: `Document ingested: ${f.name}`,
-        detail: `⚡ PortSync Vision Agent: Digitized ${parsed.lines.length} line items with real-time BTKI 2026 tariff mapping and PP 41/2021 exemption calculations.`,
-      });
-
-      triggerAnalysis(targetId, f.name);
-
-      if (window.innerWidth < 1024) {
-        setMobileView("declaration");
+        triggerAnalysis(parsed.id, file.name, true);
+        if (window.innerWidth < 1024) setMobileView("declaration");
+      } catch (err) {
+        pushToast({
+          tone: "bad",
+          title: "Document could not be read",
+          detail: err instanceof Error ? err.message : "Unexpected error while reading the file.",
+        });
+      } finally {
+        setReading(null);
       }
     },
-    [invoiceId, pickInvoice, pushToast, triggerAnalysis, clearTimers],
+    [clearTimers, pushToast, triggerAnalysis],
   );
 
   const handleReject = useCallback(
@@ -345,26 +329,77 @@ export default function App() {
   const stamp = () => new Date().toISOString();
 
   const downloadXml = useCallback(() => {
-    const xml = buildCeisaXml(invoice, rows, totals, stamp());
+    if (!invoice) return;
+    const xml = buildCeisaXml(invoice, rows, totals, stamp(), destination);
     const file = `${FILE_BASE(invoice.docNo)}-ppftz-ceisa.xml`;
     downloadText(file, xml, "application/xml");
     pushToast({
       tone: "brand",
-      title: "CEISA-ready XML downloaded",
-      detail: `${file} · ${totals.selected} line(s), ${fmtIdr(totals.payable)} payable after the FTZ facility.`,
+      title: "CEISA XML downloaded",
+      detail: `${file} · ${totals.selected} line(s), ${fmtIdr(totals.payable - totals.pph22)} payable at ${destination.port}.`,
+    });
+  }, [invoice, rows, totals, pushToast, destination]);
+
+  const downloadCsv = useCallback(() => {
+    const head = [
+      "pos",
+      "hs_code",
+      "description",
+      "qty",
+      "uom",
+      "origin",
+      "cif_usd",
+      "cif_idr",
+      "bm_pct",
+      "ppn_pct",
+      "standard_idr",
+      "coverage_pct",
+      "payable_idr",
+      "saved_idr",
+      "lartas",
+      "risk",
+    ];
+    const body = rows
+      .filter((r) => r.selected)
+      .map((r) =>
+        [
+          r.pos,
+          r.hs,
+          `"${r.line.raw.replace(/"/g, '""')}"`,
+          r.qty,
+          r.uom,
+          r.line.origin,
+          r.usdCif.toFixed(2),
+          r.idrCif,
+          Math.round(r.bmRate * 100),
+          Math.round(r.ppnRate * 100),
+          r.standard.total,
+          Math.round(r.coverage * 100),
+          r.payable,
+          r.saved,
+          r.lartas,
+          r.risk,
+        ].join(","),
+      );
+    if (!invoice) return;
+    const file = `${FILE_BASE(invoice.docNo)}-lines.csv`;
+    downloadText(file, [head.join(","), ...body].join("\n"), "text/csv");
+    pushToast({
+      tone: "neutral",
+      title: "Line schedule exported",
+      detail: `${file} · ${totals.selected} rows, duty split per line.`,
     });
   }, [invoice, rows, totals, pushToast]);
 
   const openPayload = useCallback(() => {
+    if (!invoice) return;
     const generatedAt = stamp();
-    const payload = buildPpftzPayload(invoice, rows, totals, { generatedAt, draft: false });
-    const json = JSON.stringify(payload, null, 2);
-    const xml = buildCeisaXml(invoice, rows, totals, generatedAt);
+    const payload = buildPpftzPayload(invoice, rows, totals, { generatedAt, draft: false }, destination);
     const report = validationReport(calcs, totals);
     setModal({
-      json,
-      xml,
-      fileNameBase: `${FILE_BASE(invoice.docNo)}-ppftz-01`,
+      json: JSON.stringify(payload, null, 2),
+      xml: buildCeisaXml(invoice, rows, totals, generatedAt, destination),
+      fileNameBase: `${FILE_BASE(invoice.docNo)}-${destination.regime.toLowerCase()}`,
       key: idempotencyKey(invoice.docNo, calcs),
       status:
         report.blocking.length > 0 ? "READY_WITH_BLOCKERS" : report.warnings.length > 0 ? "PASS_WITH_WARNINGS" : "PASS",
@@ -380,14 +415,14 @@ export default function App() {
       pushToast(
         ok
           ? {
-              tone: "good",
+              tone: "ok",
               title: `${label} copied`,
-              detail: "Paste into the CEISA 4.0 request body — no transmission has occurred from this build.",
+              detail: "Paste into the CEISA 4.0 request body. Nothing has been transmitted from this build.",
             }
           : {
               tone: "bad",
               title: "Clipboard blocked",
-              detail: "Your browser refused the copy request. Use Download instead.",
+              detail: "The browser refused the copy request. Use download instead.",
             },
       ),
     [pushToast],
@@ -397,139 +432,44 @@ export default function App() {
 
   const agent =
     status === "analyzing"
-      ? { text: "Agent running · mapping BTKI", tone: "busy" as const }
+      ? { text: "classifying · BTKI lookup", tone: "busy" as const }
       : ready
         ? {
-            text: `Agent ready · ${totals.lines} lines${totals.blocked > 0 ? ` · ${totals.blocked} blocked` : ""}`,
+            text: `${totals.lines} lines${totals.blocked > 0 ? ` · ${totals.blocked} blocked` : " · clear"}`,
             tone: "ready" as const,
           }
-        : { text: "Agent idle · awaiting analysis", tone: "idle" as const };
+        : { text: "awaiting analysis", tone: "idle" as const };
 
   const mobileTabs = [
-    { key: "source" as const, label: "Invoice & Source", icon: FileText },
-    { key: "declaration" as const, label: "Customs Declaration", icon: Zap },
+    { key: "source" as const, label: "Source document", icon: FileText },
+    { key: "declaration" as const, label: "Declaration", icon: Table2 },
   ];
 
+  const chrome = page !== "login" && page !== "signup";
+
   return (
-    <div className={cn("flex h-screen w-screen flex-col overflow-hidden antialiased font-sans transition-colors duration-150", theme === "dark" ? "theme-dark bg-zinc-950 text-zinc-100" : "theme-light bg-slate-50 text-slate-900")}>
-      <TopBar
-        agent={agent}
-        user={user}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        onOpenLegal={(doc) => setLegalDoc(doc)}
-        onLogout={() => {
-          logOut();
-          setUser(null);
-        }}
-      />
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-paper text-ink antialiased">
+      {chrome && (
+        <TopBar
+          page={page}
+          onNavigate={navigate}
+          agent={agent}
+          user={user}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onLogout={() => {
+            logOut();
+            setUser(null);
+          }}
+          onOpenLegal={(doc) => setLegalDoc(doc)}
+        />
+      )}
 
-      {/* Global Navigation Header Bar (div, keeping nav element for mobile tabs) */}
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/60">
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {NAV_LINKS.map((link) => {
-            const active = page === link.key;
-            const Icon = link.icon;
-            return (
-              <button
-                key={link.key}
-                type="button"
-                onClick={() => navigate(link.key)}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors cursor-pointer",
-                  active
-                    ? link.key === "terminal"
-                      ? "bg-emerald-600 font-bold text-white shadow-xs dark:bg-emerald-500 dark:text-zinc-950"
-                      : "bg-white text-slate-900 shadow-xs ring-1 ring-slate-300 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
-                    : link.key === "terminal"
-                      ? "text-emerald-700 font-semibold hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200",
-                )}
-              >
-                {Icon && <Icon size={14} className={link.key === "terminal" && !active ? "text-emerald-600 dark:text-emerald-400" : ""} />}
-                <span>{link.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* View Mode controls when inside the Terminal */}
-        {page === "terminal" && (
-          <div className="hidden lg:flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-zinc-800 dark:bg-zinc-950">
-            <span className="text-[11px] text-slate-500 px-2 font-mono dark:text-zinc-500">Workspace:</span>
-            <button
-              type="button"
-              onClick={() => setViewMode("split")}
-              title="Dual-Pane Split Workspace (Source 38% | Declaration 62%)"
-              className={cn(
-                "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
-                viewMode === "split" ? "bg-white text-blue-700 shadow-2xs font-semibold dark:bg-zinc-800 dark:text-cyan-300" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
-              )}
-            >
-              <Columns2 size={13} /> Split
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("source")}
-              title="Focus Document &amp; Source Inspector"
-              className={cn(
-                "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
-                viewMode === "source" ? "bg-white text-blue-700 shadow-2xs font-semibold dark:bg-zinc-800 dark:text-cyan-300" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
-              )}
-            >
-              <PanelLeftClose size={13} /> Source
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("declaration")}
-              title="Focus Customs Declaration Table"
-              className={cn(
-                "rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors cursor-pointer flex items-center gap-1.5",
-                viewMode === "declaration" ? "bg-white text-blue-700 shadow-2xs font-semibold dark:bg-zinc-800 dark:text-cyan-300" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
-              )}
-            >
-              <PanelRightClose size={13} /> Declaration
-            </button>
-          </div>
-        )}
-
-        {/* User state in nav */}
-        <div className="flex items-center gap-2">
-          {user ? (
-            <div className="flex items-center gap-2">
-              <span className="hidden sm:inline text-[12px] font-medium text-slate-700 font-mono dark:text-zinc-300">
-                {user.licenseNo || user.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  logOut();
-                  setUser(null);
-                }}
-                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600 hover:text-slate-900 hover:border-slate-300 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 cursor-pointer shadow-2xs"
-              >
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                demoLogIn(DEFAULT_DEMO_USER);
-                setUser(getSession());
-              }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-50 px-3 py-1 text-[11.5px] font-semibold text-emerald-800 hover:bg-emerald-100 cursor-pointer transition-colors dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
-            >
-              <UserCheck size={13} />
-              <span>Demo Broker Login</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Narrow Breakpoint Mobile Tabs (< 1024px) - Only <nav> tag so qa.mjs matches it exactly */}
-      {page === "terminal" ? (
-        <nav className="flex shrink-0 items-center gap-1 border-b border-slate-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900/40 lg:hidden">
+      {page === "terminal" && (
+        <nav
+          className="flex shrink-0 items-stretch border-b border-line bg-surface lg:hidden"
+          aria-label="Terminal panels"
+        >
           {mobileTabs.map((t) => (
             <button
               key={t.key}
@@ -538,29 +478,29 @@ export default function App() {
               onClick={() => setMobileView(t.key)}
               aria-pressed={mobileView === t.key}
               className={cn(
-                "flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-[12.5px] font-medium transition-colors cursor-pointer",
-                mobileView === t.key ? "bg-white text-slate-900 shadow-xs ring-1 ring-slate-300 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200",
+                "flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 border-b-2 text-[12px] transition-colors",
+                mobileView === t.key
+                  ? "border-ink font-medium text-ink"
+                  : "border-transparent text-ink-3 hover:text-ink",
               )}
             >
-              <t.icon size={14} className={mobileView === t.key ? "text-blue-600 dark:text-cyan-400" : ""} />
+              <t.icon size={13} strokeWidth={2} />
               {t.label}
               {t.key === "declaration" && ready && (
-                <span className="ml-1 size-1.5 rounded-full bg-emerald-500 animate-blip dark:bg-emerald-400" aria-hidden="true" />
+                <span className="ml-0.5 size-[5px] rounded-full bg-ok" aria-hidden="true" />
               )}
             </button>
           ))}
         </nav>
-      ) : (
-        <nav className="hidden" aria-hidden="true" />
       )}
 
-      {/* Main Workspace Area */}
       {page !== "terminal" ? (
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <main className="scroll-thin min-h-0 flex-1 overflow-y-auto">
           {page === "home" && <HomePage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
-          {page === "features" && <FeaturesPage onNavigate={navigate} />}
-          {page === "pricing" && <PricingPage onNavigate={navigate} />}
-          {page === "contact" && <ContactPage onNavigate={navigate} />}
+          {page === "features" && <FeaturesPage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
+          {page === "pricing" && <PricingPage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
+          {page === "contact" && <ContactPage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
+          {page === "sources" && <SourcesPage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
           {page === "login" && (
             <LoginPage
               onLoggedIn={() => {
@@ -584,56 +524,45 @@ export default function App() {
           )}
         </main>
       ) : (
-        /* Terminal Layout: main direct children are the 2 panels so qa.mjs rects() matches 38% / 62% */
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden lg:flex-row">
-          {/* Left Panel: Document & Source Inspector (38% width) */}
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
           <div
             className={cn(
-              "min-h-0 flex-1 lg:w-[38%] lg:flex-none lg:border-r lg:border-slate-200 lg:bg-slate-50/60 dark:lg:border-zinc-800/80 dark:lg:bg-zinc-900/40",
-              viewMode === "source"
-                ? "flex lg:w-full lg:flex-none"
-                : viewMode === "declaration"
-                  ? "hidden"
-                  : mobileView === "source"
-                    ? "flex"
-                    : "hidden lg:flex",
+              "min-h-0 shrink-0 border-line bg-paper lg:flex lg:w-[33%] lg:max-w-[400px] lg:min-w-[280px] lg:flex-none lg:border-r xl:w-[40%] xl:max-w-[520px] xl:min-w-[380px]",
+              mobileView === "source" ? "flex flex-1" : "hidden",
             )}
           >
             <LeftPanel
               invoice={invoice}
-              invoiceId={invoiceId}
-              onPick={pickInvoice}
               uploaded={uploaded}
+              reading={reading}
+              sourceFile={sourceFile}
               onUpload={handleUpload}
               onClearUpload={() => {
+                clearTimers();
                 setUploaded(null);
-                analyzingFileRef.current = null;
-                if (invoiceId.startsWith("uploaded-")) {
-                  pickInvoice(DEMO_INVOICES[0]!.id);
-                }
+                setSourceFile(null);
+                setInvoiceId(null);
+                setOverrides({});
+                setMasterlistMap({});
+                setSelectedMap({});
+                setActiveId(null);
+                setStage(0);
+                setStatus("staged");
               }}
               onReject={handleReject}
               status={status}
               stage={stage}
               calcs={calcs}
               activeId={activeId}
-              onActive={setActiveId}
               onAnalyze={analyze}
               onReset={resetOverrides}
             />
           </div>
 
-          {/* Right Panel: Agent Output & Declaration Engine (62% width) */}
           <div
             className={cn(
-              "min-h-0 flex-1 lg:w-[62%] lg:flex-none",
-              viewMode === "declaration"
-                ? "flex lg:w-full lg:flex-none"
-                : viewMode === "source"
-                  ? "hidden"
-                  : mobileView === "declaration"
-                    ? "flex"
-                    : "hidden lg:flex",
+              "min-h-0 min-w-0 flex-1 bg-surface",
+              mobileView === "declaration" ? "flex" : "hidden lg:flex",
             )}
           >
             <RightPanel
@@ -648,9 +577,10 @@ export default function App() {
               onSelectAll={selectAll}
               onOverride={overrideLine}
               onDownloadXml={downloadXml}
+              onDownloadCsv={downloadCsv}
               onOpenPayload={openPayload}
-              regime={regime}
-              onRegimeChange={setRegime}
+              destination={destination}
+              onDestinationChange={setDestinationId}
               onToggleMasterlist={toggleMasterlist}
               onOpenLegal={(doc) => setLegalDoc(doc)}
             />
@@ -658,52 +588,23 @@ export default function App() {
         </main>
       )}
 
-      {/* Footer */}
-      <footer className="flex h-8 shrink-0 flex-wrap items-center gap-4 border-t border-slate-200 bg-white/95 px-5 text-[11px] text-slate-500 backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-950 dark:text-zinc-400">
-        <span className="truncate font-medium text-slate-700 dark:text-zinc-300">
-          PortSync FTZ Agent · reference BTKI 2026 edition ·{" "}
-          {ready ? `${calcs.length} classified lines` : "awaiting analysis"}
-        </span>
-        <span className="tnum hidden 2xl:inline text-slate-500 dark:text-zinc-400">
-          Kurs pabean USD/IDR {FX.USD_IDR.toLocaleString("id-ID")} · PPN {(PPN_RATE * 100).toFixed(0)}% · PPh 22{" "}
-          {(PPH22_RATE * 100).toFixed(1)}%
-        </span>
-
-        {/* Legal & Compliance Links */}
-        <div className="hidden sm:flex items-center gap-2.5 text-[11px] border-l border-slate-200 pl-3 dark:border-zinc-800">
-          <button
-            type="button"
-            onClick={() => setLegalDoc("disclaimer")}
-            className="font-semibold text-slate-600 hover:text-blue-700 hover:underline cursor-pointer dark:text-zinc-400 dark:hover:text-cyan-300"
-          >
-            Statutory Disclaimer
-          </button>
-          <span className="text-slate-300 dark:text-zinc-700">·</span>
-          <button
-            type="button"
-            onClick={() => setLegalDoc("tos")}
-            className="font-medium text-slate-600 hover:text-slate-900 hover:underline cursor-pointer dark:text-zinc-400 dark:hover:text-zinc-200"
-          >
-            Terms of Service
-          </button>
-          <span className="text-slate-300 dark:text-zinc-700">·</span>
-          <button
-            type="button"
-            onClick={() => setLegalDoc("privacy")}
-            className="font-medium text-slate-600 hover:text-slate-900 hover:underline cursor-pointer dark:text-zinc-400 dark:hover:text-zinc-200"
-          >
-            Privacy Policy
-          </button>
-        </div>
-
-        <span className="ml-auto tnum shrink-0 text-slate-500 dark:text-zinc-400">
-          Invoice total {fmtUsd(totals.usdCif)} · filing set {ready ? `${totals.selected}/${totals.lines}` : "—"}
-        </span>
-        <span className="shrink-0 text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-emerald-500 animate-blip" />
-          sandbox · no live dispatch
-        </span>
-      </footer>
+      {page === "terminal" && (
+        <footer className="flex h-6 shrink-0 items-center gap-3 overflow-hidden border-t border-line bg-surface px-3 font-mono text-[10px] whitespace-nowrap text-ink-3">
+          <span className="shrink-0 text-ink-2">BTKI 2022</span>
+          <span className="hidden min-w-0 truncate sm:inline">
+            {ready ? `${calcs.length} classified` : "idle"} · kurs {FX.USD_IDR.toLocaleString("id-ID")} · PPN{" "}
+            {(PPN_RATE * 100).toFixed(0)}% · PPh 22 {(PPH22_RATE * 100).toFixed(1)}%
+          </span>
+          <span className="ml-auto hidden shrink-0 lg:inline">{invoice?.docNo ?? "no document"}</span>
+          <span className="hidden shrink-0 xl:inline">
+            {ready ? `${totals.selected}/${totals.lines} filed · ${fmtUsd(totals.usdCif)} CIF` : "no filing set"}
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-ink-2">
+            <span className="size-[4px] rounded-full bg-warn" />
+            sandbox<span className="hidden md:inline"> · nothing transmitted</span>
+          </span>
+        </footer>
+      )}
 
       {legalDoc && <LegalModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
       {modal && <PayloadModal payload={modal} onClose={() => setModal(null)} onCopied={onCopied} />}

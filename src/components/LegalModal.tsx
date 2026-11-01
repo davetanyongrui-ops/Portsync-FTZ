@@ -1,333 +1,261 @@
-import { useState, useEffect } from "react";
-import {
-  FileText,
-  Lock,
-  Scale,
-  ShieldAlert,
-  ShieldCheck,
-  X,
-  Printer,
-  Copy,
-  Check,
-  Building2,
-  FileCheck2,
-} from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { X } from "lucide-react";
 import { cn } from "../lib/cn";
+import { Btn } from "./ui";
 
 export type LegalDocType = "disclaimer" | "tos" | "privacy";
 
-interface LegalModalProps {
-  initialDoc?: LegalDocType;
-  onClose: () => void;
+const DOCS: { id: LegalDocType; label: string; title: string; updated: string }[] = [
+  { id: "disclaimer", label: "Statutory disclaimer", title: "Statutory disclaimer", updated: "October 2026" },
+  { id: "tos", label: "Terms of service", title: "Terms of service", updated: "October 2026" },
+  { id: "privacy", label: "Trade data", title: "Privacy & trade data", updated: "October 2026" },
+];
+
+function Section({ n, title, children }: { n: string; title: string; children: ReactNode }) {
+  return (
+    <section className="mt-5 first:mt-0">
+      <h3 className="flex items-baseline gap-2 text-[12.5px] font-semibold text-ink">
+        <span className="font-mono text-[10.5px] text-ink-3">{n}</span>
+        {title}
+      </h3>
+      <div className="mt-1.5 space-y-2 text-[12.5px] leading-[1.7] text-ink-2">{children}</div>
+    </section>
+  );
 }
 
-export function LegalModal({ initialDoc = "disclaimer", onClose }: LegalModalProps) {
-  const [activeDoc, setActiveDoc] = useState<LegalDocType>(initialDoc);
-  const [copied, setCopied] = useState(false);
+function List({ items }: { items: ReactNode[] }) {
+  return (
+    <ul className="space-y-1.5">
+      {items.map((it, i) => (
+        <li key={i} className="flex gap-2">
+          <span className="mt-[7px] size-[3px] shrink-0 rounded-full bg-line-strong" />
+          <span>{it}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function LegalModal({ initialDoc = "disclaimer", onClose }: { initialDoc?: LegalDocType; onClose: () => void }) {
+  const [doc, setDoc] = useState<LegalDocType>(initialDoc);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
+  const meta = DOCS.find((d) => d.id === doc)!;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 p-4 backdrop-blur-[2px]"
+      onClick={onClose}
+      role="presentation"
+    >
       <div
-        className="relative flex flex-col w-full max-w-4xl max-h-[90vh] rounded-2xl border border-slate-200/90 bg-white shadow-2xl overflow-hidden dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Legal and compliance"
         onClick={(e) => e.stopPropagation()}
+        className="animate-rise flex h-full max-h-[min(720px,90vh)] w-full max-w-[860px] flex-col overflow-hidden rounded-[8px] border border-line bg-surface shadow-[var(--shadow-modal)]"
       >
-        {/* Modal Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4.5 bg-slate-50/80 dark:border-zinc-800 dark:bg-zinc-900/60">
-          <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-xl border border-blue-500/20 bg-blue-50 text-blue-600 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400">
-              <Scale size={20} strokeWidth={2} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-[16px] font-bold tracking-tight text-slate-900 dark:text-white">
-                  PortSync FTZ Legal &amp; Regulatory Compliance
-                </h2>
-                <span className="rounded-full border border-emerald-500/30 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400">
-                  PMK 185/2022
-                </span>
-              </div>
-              <p className="text-[12px] text-slate-500 dark:text-zinc-400">
-                Statutory customs guidance, terms of service, and commercial trade privacy standards.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:text-white cursor-pointer transition-colors shadow-2xs"
-              title="Print regulatory documentation"
-            >
-              <Printer size={13} />
-              <span>Print</span>
-            </button>
-            <button
-              type="button"
-              onClick={copyToClipboard}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:text-white cursor-pointer transition-colors shadow-2xs"
-              title="Copy shareable link"
-            >
-              {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
-              <span>{copied ? "Copied" : "Share"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="grid size-8 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800 cursor-pointer transition-colors ml-1"
-              aria-label="Close dialog"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex shrink-0 border-b border-slate-200 bg-white px-6 pt-2 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex items-center gap-2">
-            {[
-              { id: "disclaimer" as LegalDocType, label: "Statutory Disclaimer", icon: ShieldAlert },
-              { id: "tos" as LegalDocType, label: "Terms of Service", icon: FileText },
-              { id: "privacy" as LegalDocType, label: "Privacy & Trade Data Security", icon: Lock },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const active = activeDoc === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveDoc(tab.id)}
-                  className={cn(
-                    "flex items-center gap-2 border-b-2 px-4 py-3 text-[13px] font-semibold transition-colors cursor-pointer",
-                    active
-                      ? "border-blue-600 text-blue-700 dark:border-cyan-400 dark:text-cyan-300"
-                      : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:border-zinc-700",
-                  )}
-                >
-                  <Icon size={15} />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Modal Scrollable Content Area */}
-        <div className="scroll-thin min-h-0 flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 text-[13.5px] leading-relaxed text-slate-700 dark:text-zinc-300">
-          {activeDoc === "disclaimer" && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Highlight Regulatory Alert */}
-              <div className="rounded-xl border border-amber-300/80 bg-amber-50/90 p-4.5 dark:border-amber-500/30 dark:bg-amber-500/10">
-                <div className="flex items-start gap-3">
-                  <ShieldAlert size={20} className="shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-                  <div>
-                    <h4 className="text-[13.5px] font-bold text-amber-900 dark:text-amber-300">
-                      Statutory Customs Authority Notice (Republic of Indonesia)
-                    </h4>
-                    <p className="mt-1 text-[12.5px] text-amber-800/90 dark:text-amber-300/80 leading-relaxed">
-                      PortSync FTZ is a pre-filing compliance validation and decision-support system. It does not replace the statutory authority of certified Customs Brokers (PPJK) or the official determinations of the Directorate General of Customs and Excise (Direktorat Jenderal Bea dan Cukai - DJBC).
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Building2 size={16} className="text-blue-600 dark:text-cyan-400" />
-                  1. Legislative Scope &amp; Regulatory Framework
-                </h3>
-                <p>
-                  PortSync FTZ has been constructed in strict conformance with the trade facilitation and customs statutory provisions of the <strong>Batam Free Trade Zone and Free Port (Kawasan Perdagangan Bebas dan Pelabuhan Bebas Batam - KPBPB)</strong> under:
-                </p>
-                <ul className="list-disc pl-5 space-y-1.5 text-slate-600 dark:text-zinc-300">
-                  <li><strong>Law No. 17 of 2006</strong> amending Law No. 10 of 1995 on Customs (Undang-Undang Kepabeanan).</li>
-                  <li><strong>Government Regulation (PP) No. 41 of 2021</strong> concerning the Administration of the Batam, Bintan, and Karimun Free Trade Zone and Free Port.</li>
-                  <li><strong>Minister of Finance Regulation (PMK) No. 185/PMK.04/2022</strong> regarding Customs Procedures for Entering and Releasing Goods to and from Free Trade Zones.</li>
-                  <li><strong>BTKI 2026 Edition</strong> (Buku Tarif Kepabeanan Indonesia) published by the Ministry of Finance.</li>
-                </ul>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <FileCheck2 size={16} className="text-blue-600 dark:text-cyan-400" />
-                  2. Mandatory Professional Verification (PPJK Requirement)
-                </h3>
-                <p>
-                  All BTKI 8-digit tariff classifications, CIF value derivations, Lartas (prohibited/restricted) risk flags, and generated CEISA 4.0 XML/JSON payloads are provided as <em>advisory pre-declaration assessments</em>.
-                </p>
-                <p>
-                  In accordance with Indonesian Customs Regulations, any final customs declaration (specifically PPFTZ-01 for offshore entry, PPFTZ-02 for inter-zone transfers, and PPFTZ-03 for local deliveries) transmitted to CEISA 4.0 via the National Single Window (INSW) must be authenticated and submitted under the electronic signature and license of an authorized <strong>Pengusaha Pengurusan Jasa Kepabeanan (PPJK)</strong> or licensed importer holding a valid <strong>NIB (Nomor Induk Berusaha)</strong>.
-                </p>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  3. Limitation of Statutory Liability
-                </h3>
-                <p>
-                  Under no circumstances shall PortSync FTZ, its software engineers, algorithmic authors, or corporate contributors be held liable for:
-                </p>
-                <ul className="list-disc pl-5 space-y-1.5 text-slate-600 dark:text-zinc-300">
-                  <li>Import duty re-assessments, tax discrepancy notices (Surat Penetapan Tarif dan/atau Nilai Pabean - SPTNP), or administrative surcharges imposed by customs auditors.</li>
-                  <li>Delays in physical clearance, container detention, or port demurrage incurred at Pelabuhan Batu Ampar or Sekupang terminal.</li>
-                  <li>Red-channel inspections (Jalur Merah) triggered by physical discrepancy, missing surveyor reports (LS), or uncertified SNI standards.</li>
-                  <li>Decisions rendered by customs officials regarding the eligibility of FTZ duty exemption versus standard MFN import duty.</li>
-                </ul>
-              </section>
-
-              <section className="space-y-2 border-t border-slate-200 pt-4 dark:border-zinc-800 text-[12px] text-slate-500 dark:text-zinc-400">
-                <p>
-                  Official Reference: BP Batam Directorate of Customs Clearance &amp; KPU Bea dan Cukai Tipe B Batam. Last updated: October 2026.
-                </p>
-              </section>
-            </div>
-          )}
-
-          {activeDoc === "tos" && (
-            <div className="space-y-6 animate-fade-in">
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  1. Agreement to Terms &amp; Institutional Scope
-                </h3>
-                <p>
-                  These Terms of Service constitute a legally binding agreement between you (whether acting personally or on behalf of an enterprise, freight forwarder, or licensed customs brokerage) and PortSync Logistics Systems regarding access to the PortSync FTZ compliance and customs automation terminal.
-                </p>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  2. Authorized Commercial Use &amp; Broker Conduct
-                </h3>
-                <p>
-                  You represent and warrant that:
-                </p>
-                <ul className="list-disc pl-5 space-y-1.5 text-slate-600 dark:text-zinc-300">
-                  <li>You maintain valid corporate standing, tax identification (NPWP), and customs permissions under Indonesian law to operate within KPBPB Batam.</li>
-                  <li>Uploaded commercial invoices, packing lists, and transport documents represent genuine, unmanipulated commercial transactions.</li>
-                  <li>You will not use the system to deliberately misclassify strategic export-controlled goods, dual-use technology, or prohibited narcotics/weapons.</li>
-                </ul>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  3. Intellectual Property &amp; Algorithmic Output
-                </h3>
-                <p>
-                  The heuristics, extraction algorithms, validation engine rules, and user interfaces comprising PortSync FTZ are the proprietary intellectual property of PortSync Logistics Systems. The BTKI tariff nomenclature and statutory regulations incorporated within the system remain public domain property of the Ministry of Finance of the Republic of Indonesia.
-                </p>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  4. API Availability &amp; Gateway Upgrades
-                </h3>
-                <p>
-                  PortSync FTZ is engineered for 99.9% uptime. However, scheduled maintenance, updates to official INSW schema versions, or interruptions on third-party customs servers (CEISA 4.0 DJBC) are beyond our control and shall not constitute a breach of service commitments.
-                </p>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  5. Governing Law &amp; Jurisdiction
-                </h3>
-                <p>
-                  These terms are governed by and construed in accordance with the laws of the Republic of Indonesia. Any legal action or arbitration arising out of or related to these terms shall be instituted exclusively in the District Court of Batam (Pengadilan Negeri Batam), Riau Islands Province.
-                </p>
-              </section>
-            </div>
-          )}
-
-          {activeDoc === "privacy" && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Security Banner */}
-              <div className="rounded-xl border border-emerald-300/80 bg-emerald-50/90 p-4.5 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-                <div className="flex items-start gap-3">
-                  <ShieldCheck size={20} className="shrink-0 text-emerald-700 dark:text-emerald-400 mt-0.5" />
-                  <div>
-                    <h4 className="text-[13.5px] font-bold text-emerald-900 dark:text-emerald-300">
-                      Commercial Trade Secrets &amp; PDP Law Compliance
-                    </h4>
-                    <p className="mt-1 text-[12.5px] text-emerald-800/90 dark:text-emerald-300/80 leading-relaxed">
-                      We treat all commercial invoices, item unit prices, supplier names, and consignee manifests as strict trade secrets. Processing adheres to Indonesian Personal Data Protection Law (UU No. 27/2022).
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  1. Zero Model Retraining on Private Invoices
-                </h3>
-                <p>
-                  <strong>We do not use your commercial invoice text, pricing schedules, supplier masterlists, or proprietary product descriptions to train public AI models.</strong>
-                </p>
-                <p>
-                  Our BTKI classification engine runs deterministic matching against statutory tariff registers and closed enterprise embeddings. Your trade volumes, margins, and procurement relationships remain strictly confidential to your organization.
-                </p>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  2. Client-Side &amp; Edge Processing Architecture
-                </h3>
-                <p>
-                  Whenever possible, document parsing, OCR text layout recognition, and PDF rendering are conducted client-side within your browser runtime using WebAssembly and isolated Web Workers. Document bytes do not persist on external servers once classification is rendered.
-                </p>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  3. Encrypted Data Transmission &amp; Storage
-                </h3>
-                <ul className="list-disc pl-5 space-y-1.5 text-slate-600 dark:text-zinc-300">
-                  <li><strong>In Transit:</strong> All data exchanged between your client and our API endpoints is secured using TLS 1.3 cryptography with strict cipher suites.</li>
-                  <li><strong>At Rest:</strong> User credentials, broker license identifiers, and audit logs are safeguarded in an enterprise libSQL/Turso cloud database with full AES-256 disk encryption.</li>
-                </ul>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">
-                  4. Your Statutory Rights (UU No. 27/2022)
-                </h3>
-                <p>
-                  Under Indonesian PDP regulations, you maintain the right to access, rectify, and permanently erase any stored declaration history, session records, or company profiles upon written request or via the terminal dashboard.
-                </p>
-              </section>
-            </div>
-          )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/80 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/60 text-[12px] text-slate-500 dark:text-zinc-400">
-          <div className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-emerald-500" />
-            <span>Kawasan Pabean Batam Enclave Security Protocol</span>
+        <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+          <div>
+            <h2 className="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">Legal &amp; compliance</h2>
+            <p className="mt-0.5 text-[11px] text-ink-3">
+              PortSync Logistics Systems · KPBPB Batam · {meta.updated}
+            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-slate-900 px-5 py-2 text-[12.5px] font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 cursor-pointer transition-colors shadow-xs"
+            className="ml-auto grid size-7 cursor-pointer place-items-center rounded-[4px] text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
+            aria-label="Close"
           >
-            I Understand &amp; Agree
+            <X size={14} />
           </button>
+        </div>
+
+        <div className="flex min-h-0 flex-1">
+          <nav className="hidden w-44 shrink-0 border-r border-line bg-sunken/50 p-2 sm:block" aria-label="Legal documents">
+            {DOCS.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setDoc(d.id)}
+                className={cn(
+                  "block w-full cursor-pointer rounded-[4px] px-2 py-1.5 text-left text-[12px] transition-colors",
+                  doc === d.id ? "bg-surface font-medium text-ink ring-1 ring-line" : "text-ink-2 hover:text-ink",
+                )}
+              >
+                {d.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <div className="mb-3 flex gap-1.5 sm:hidden">
+              {DOCS.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setDoc(d.id)}
+                  className={cn(
+                    "cursor-pointer rounded-[4px] border px-2 py-1 text-[11px]",
+                    doc === d.id ? "border-ink bg-ink text-paper" : "border-line text-ink-2",
+                  )}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="max-w-[68ch]">
+              <h1 className="display text-[22px] text-ink">{meta.title}</h1>
+
+              {doc === "disclaimer" && (
+                <>
+                  <div className="mt-3 rounded-[5px] border border-warn/30 bg-warn-soft px-3 py-2 text-[11.5px] leading-relaxed text-warn">
+                    PortSync FTZ is a pre-filing validation and decision-support system. It does not replace the
+                    statutory authority of a licensed customs broker (PPJK) or the determinations of the Directorate
+                    General of Customs and Excise (DJBC).
+                  </div>
+                  <Section n="1" title="Legislative scope">
+                    <p>
+                      The engine is built against the statutory framework of the Batam free trade zone and free port
+                      (KPBPB):
+                    </p>
+                    <List
+                      items={[
+                        <>
+                          <strong>Law No. 17 of 2006</strong> amending Law No. 10 of 1995 on customs.
+                        </>,
+                        <>
+                          <strong>Government Regulation No. 10 of 2012</strong> on the customs, tax and excise treatment
+                          of goods entering, leaving and remaining within a designated free trade zone, with{" "}
+                          <strong>PMK 47/PMK.04/2012</strong> on the procedures for entry and release.
+                        </>,
+                        <>
+                          <strong>Perka BP Batam 8/2019</strong> (as amended) on the administration of entry into and
+                          release from the Batam free zone.
+                        </>,
+                        <>
+                          <strong>BTKI 2022</strong>, the Indonesian customs tariff book established by PMK
+                          26/PMK.010/2022 and used as the classification reference in this build.
+                        </>,
+                      ]}
+                    />
+                  </Section>
+                  <Section n="2" title="Professional verification">
+                    <p>
+                      Tariff classification, CIF derivation, lartas flags and the generated CEISA payloads are advisory
+                      pre-declaration assessments. Any declaration transmitted to CEISA 4.0 through the national single
+                      window must be signed and submitted under the licence of an authorised PPJK or a licensed importer
+                      holding a valid NIB.
+                    </p>
+                  </Section>
+                  <Section n="3" title="Limitation of liability">
+                    <p>PortSync is not liable for:</p>
+                    <List
+                      items={[
+                        "Duty re-assessments, SPTNP notices or administrative surcharges imposed by a customs auditor.",
+                        "Clearance delay, container detention or demurrage at Batu Ampar or Sekupang.",
+                        "Red-channel inspection triggered by physical discrepancy, a missing surveyor report or an uncertified SNI standard.",
+                        "An officer's determination on facility eligibility versus standard MFN duty.",
+                      ]}
+                    />
+                  </Section>
+                  <p className="mt-5 border-t border-line pt-3 text-[11px] text-ink-3">
+                    Reference: BP Batam directorate of customs clearance and KPU Bea dan Cukai Tipe B Batam.
+                  </p>
+                </>
+              )}
+
+              {doc === "tos" && (
+                <>
+                  <Section n="1" title="Agreement and scope">
+                    <p>
+                      These terms form a binding agreement between you — personally or on behalf of an enterprise,
+                      forwarder or licensed brokerage — and PortSync Logistics Systems, governing access to the customs
+                      automation terminal.
+                    </p>
+                  </Section>
+                  <Section n="2" title="Authorised use">
+                    <p>You represent and warrant that:</p>
+                    <List
+                      items={[
+                        "You hold valid corporate standing, NPWP and customs permissions to operate within KPBPB Batam.",
+                        "Uploaded invoices, packing lists and transport documents describe genuine, unmanipulated transactions.",
+                        "You will not use the system to misclassify export-controlled goods, dual-use technology, narcotics or weapons.",
+                      ]}
+                    />
+                  </Section>
+                  <Section n="3" title="Intellectual property">
+                    <p>
+                      The extraction heuristics, validation rules and interface are the property of PortSync Logistics
+                      Systems. The BTKI nomenclature and the underlying regulations remain public domain material of the
+                      Ministry of Finance of the Republic of Indonesia.
+                    </p>
+                  </Section>
+                  <Section n="4" title="Availability">
+                    <p>
+                      Scheduled maintenance, changes to the official INSW schema and interruptions at DJBC are outside
+                      our control and do not constitute a breach of any service commitment.
+                    </p>
+                  </Section>
+                  <Section n="5" title="Governing law">
+                    <p>
+                      These terms are governed by the laws of the Republic of Indonesia. Any dispute is brought
+                      exclusively before the District Court of Batam, Riau Islands.
+                    </p>
+                  </Section>
+                </>
+              )}
+
+              {doc === "privacy" && (
+                <>
+                  <div className="mt-3 rounded-[5px] border border-ok/30 bg-ok-soft px-3 py-2 text-[11.5px] leading-relaxed text-ok">
+                    Invoices, unit prices, supplier names and consignee manifests are treated as trade secrets. Handling
+                    follows the Indonesian personal data protection law, UU No. 27/2022.
+                  </div>
+                  <Section n="1" title="No model training on your invoices">
+                    <p>
+                      Invoice text, pricing schedules, supplier masterlists and product descriptions are never used to
+                      train a public model. Classification runs against the statutory tariff register and closed
+                      rule sets, so volumes, margins and procurement relationships stay confidential.
+                    </p>
+                  </Section>
+                  <Section n="2" title="Local-first processing">
+                    <p>
+                      Parsing, text-layout recognition and PDF rendering happen in your browser runtime. In this build
+                      the document never leaves the tab at all — there is no upload endpoint, and the payload you
+                      download is generated on your machine.
+                    </p>
+                  </Section>
+                  <Section n="3" title="Storage">
+                    <p>
+                      The only thing persisted is your theme choice and, if you sign in, a session record in local
+                      storage. Clearing site data removes both.
+                    </p>
+                  </Section>
+                  <Section n="4" title="Your rights">
+                    <p>
+                      Under UU No. 27/2022 you may access, rectify or erase any stored session record. In this build that
+                      is a single action: sign out, or clear site data for the origin.
+                    </p>
+                  </Section>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3 border-t border-line px-4 py-2.5">
+          <span className="hidden font-mono text-[10px] text-ink-3 sm:inline">KPBPB Batam · sandbox build</span>
+          <Btn size="sm" variant="primary" onClick={onClose} className="ml-auto">
+            Close
+          </Btn>
         </div>
       </div>
     </div>

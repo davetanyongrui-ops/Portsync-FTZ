@@ -1,43 +1,51 @@
 /**
- * Currency & Customs Valuation Engine
- * Supports both:
- * 1. Statutory Ministry of Finance (KMK) customs valuation exchange rates (PP No. 41/2021)
- * 2. Live real-time market spot rates with dynamic intraday fluctuations
+ * Currency & Customs Valuation
+ *
+ * Two distinct things live here and they must not be confused:
+ *
+ * 1. `FX` — the statutory customs valuation rate ("kurs pabean"). Indonesian duty
+ *    is computed on the rate the Minister of Finance publishes for the relevant
+ *    period, NOT on the market spot rate. Every rupiah figure in the declaration
+ *    uses this. It is a reference value in this build: before filing, replace it
+ *    with the KMK rate in force for the week of entry.
+ *
+ * 2. `LIVE_MARKET_FX` — market spot, display only. It is fetched from a public
+ *    FX endpoint and is never used to compute duty. When the request fails the
+ *    indicator says so; it does not invent a movement.
  */
 
 export const FX = {
-  USD_IDR: 16200, // Active KMK Statutory Tariff Rate
-  SGD_IDR: 12150, // Active KMK Statutory Tariff Rate
+  /** Reference kurs pabean. Substitute the KMK rate for the week of entry. */
+  USD_IDR: 16200,
+  SGD_IDR: 12150,
   USD_SGD: 1.3333,
-};
-
-export const FX_DELTA = {
-  USD_IDR: 18,
-  SGD_IDR: 12,
-};
+} as const;
 
 export interface LiveMarketFx {
   spotUsdIdr: number;
   spotSgdIdr: number;
-  deltaUsd: number;
-  deltaSgd: number;
-  deltaUsdPct: string;
-  deltaSgdPct: string;
-  lastUpdated: string;
+  /** Signed change since the previous observation, or null when unknown. */
+  deltaUsd: number | null;
+  deltaSgd: number | null;
+  deltaUsdPct: string | null;
+  deltaSgdPct: string | null;
+  lastUpdated: string | null;
   isLive: boolean;
   source: string;
 }
 
 export const LIVE_MARKET_FX: LiveMarketFx = {
-  spotUsdIdr: 18133,
-  spotSgdIdr: 14186,
-  deltaUsd: 18,
-  deltaSgd: 12,
-  deltaUsdPct: "+0.10%",
-  deltaSgdPct: "+0.08%",
-  lastUpdated: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-  isLive: true,
-  source: "Open Exchange / Bank Indonesia Spot API",
+  // Until a real observation arrives these mirror the statutory rate, and the
+  // UI labels them as a reference rather than a quote.
+  spotUsdIdr: FX.USD_IDR,
+  spotSgdIdr: FX.SGD_IDR,
+  deltaUsd: null,
+  deltaSgd: null,
+  deltaUsdPct: null,
+  deltaSgdPct: null,
+  lastUpdated: null,
+  isLive: false,
+  source: "reference rate — no market quote retrieved",
 };
 
 let listeners: Array<() => void> = [];
@@ -51,6 +59,10 @@ export function subscribeFx(cb: () => void) {
 
 let isFetching = false;
 
+function pct(delta: number, base: number): string {
+  return `${delta >= 0 ? "+" : ""}${((delta / base) * 100).toFixed(2)}%`;
+}
+
 export async function fetchLiveRates(): Promise<boolean> {
   if (isFetching) return false;
   isFetching = true;
@@ -58,76 +70,61 @@ export async function fetchLiveRates(): Promise<boolean> {
     const res = await fetch("https://open.er-api.com/v6/latest/USD", {
       headers: { Accept: "application/json" },
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.rates && data.rates.IDR && data.rates.SGD) {
-        const rawUsd = Number(data.rates.IDR);
-        const rawSgd = Number(data.rates.SGD);
-        const rawSgdIdr = rawUsd / rawSgd;
+    if (!res.ok) throw new Error(`FX endpoint returned ${res.status}`);
 
-        // Calculate live spot rates
-        const spotUsd = Math.round(rawUsd);
-        const spotSgd = Math.round(rawSgdIdr);
-
-        const prevUsd = LIVE_MARKET_FX.spotUsdIdr || 18115;
-        const prevSgd = LIVE_MARKET_FX.spotSgdIdr || 14175;
-
-        let deltaUsd = spotUsd - prevUsd;
-        let deltaSgd = spotSgd - prevSgd;
-        if (deltaUsd === 0) deltaUsd = 18;
-        if (deltaSgd === 0) deltaSgd = 12;
-
-        LIVE_MARKET_FX.spotUsdIdr = spotUsd;
-        LIVE_MARKET_FX.spotSgdIdr = spotSgd;
-        LIVE_MARKET_FX.deltaUsd = deltaUsd;
-        LIVE_MARKET_FX.deltaSgd = deltaSgd;
-        LIVE_MARKET_FX.deltaUsdPct = `${deltaUsd >= 0 ? "+" : ""}${((deltaUsd / spotUsd) * 100).toFixed(2)}%`;
-        LIVE_MARKET_FX.deltaSgdPct = `${deltaSgd >= 0 ? "+" : ""}${((deltaSgd / spotSgd) * 100).toFixed(2)}%`;
-        LIVE_MARKET_FX.lastUpdated = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        LIVE_MARKET_FX.isLive = true;
-
-        // Also update FX_DELTA for top bar ticker
-        FX_DELTA.USD_IDR = deltaUsd;
-        FX_DELTA.SGD_IDR = deltaSgd;
-
-        listeners.forEach((l) => l());
-        return true;
-      }
+    const data = await res.json();
+    const rawUsd = Number(data?.rates?.IDR);
+    const rawSgd = Number(data?.rates?.SGD);
+    if (!Number.isFinite(rawUsd) || !Number.isFinite(rawSgd) || rawSgd <= 0) {
+      throw new Error("FX payload did not contain usable USD/IDR and USD/SGD rates");
     }
-  } catch {
-    // If offline or blocked by browser extensions, simulate realistic live micro-jitter
-    simulateLiveJitter();
+
+    const spotUsd = Math.round(rawUsd);
+    const spotSgd = Math.round(rawUsd / rawSgd);
+
+    // A delta only exists once we have a previous genuine observation.
+    const hadPrevious = LIVE_MARKET_FX.lastUpdated !== null;
+    const prevUsd = LIVE_MARKET_FX.spotUsdIdr;
+    const prevSgd = LIVE_MARKET_FX.spotSgdIdr;
+
+    LIVE_MARKET_FX.spotUsdIdr = spotUsd;
+    LIVE_MARKET_FX.spotSgdIdr = spotSgd;
+
+    if (hadPrevious) {
+      LIVE_MARKET_FX.deltaUsd = spotUsd - prevUsd;
+      LIVE_MARKET_FX.deltaSgd = spotSgd - prevSgd;
+      LIVE_MARKET_FX.deltaUsdPct = pct(spotUsd - prevUsd, prevUsd);
+      LIVE_MARKET_FX.deltaSgdPct = pct(spotSgd - prevSgd, prevSgd);
+    } else {
+      LIVE_MARKET_FX.deltaUsd = null;
+      LIVE_MARKET_FX.deltaSgd = null;
+      LIVE_MARKET_FX.deltaUsdPct = null;
+      LIVE_MARKET_FX.deltaSgdPct = null;
+    }
+
+    LIVE_MARKET_FX.lastUpdated = new Date().toISOString();
+    LIVE_MARKET_FX.isLive = true;
+    LIVE_MARKET_FX.source = "open.er-api.com";
+
+    listeners.forEach((l) => l());
+    return true;
+  } catch (err) {
+    // Report the failure. Never synthesise a quote.
+    LIVE_MARKET_FX.isLive = false;
+    LIVE_MARKET_FX.source = `market quote unavailable (${err instanceof Error ? err.message : "network error"})`;
+    listeners.forEach((l) => l());
+    return false;
   } finally {
     isFetching = false;
   }
-  return false;
-}
-
-function simulateLiveJitter() {
-  const jitterUsd = Math.floor(Math.random() * 15) - 6;
-  const jitterSgd = Math.floor(Math.random() * 9) - 4;
-
-  LIVE_MARKET_FX.spotUsdIdr += jitterUsd;
-  LIVE_MARKET_FX.spotSgdIdr += jitterSgd;
-  LIVE_MARKET_FX.deltaUsd = jitterUsd || 14;
-  LIVE_MARKET_FX.deltaSgd = jitterSgd || 8;
-  LIVE_MARKET_FX.deltaUsdPct = `${LIVE_MARKET_FX.deltaUsd >= 0 ? "+" : ""}${((LIVE_MARKET_FX.deltaUsd / LIVE_MARKET_FX.spotUsdIdr) * 100).toFixed(2)}%`;
-  LIVE_MARKET_FX.deltaSgdPct = `${LIVE_MARKET_FX.deltaSgd >= 0 ? "+" : ""}${((LIVE_MARKET_FX.deltaSgd / LIVE_MARKET_FX.spotSgdIdr) * 100).toFixed(2)}%`;
-  LIVE_MARKET_FX.lastUpdated = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-
-  FX_DELTA.USD_IDR = LIVE_MARKET_FX.deltaUsd;
-  FX_DELTA.SGD_IDR = LIVE_MARKET_FX.deltaSgd;
-
-  listeners.forEach((l) => l());
 }
 
 export function refreshFx(): boolean {
-  fetchLiveRates();
+  void fetchLiveRates();
   return true;
 }
 
-// Auto-poll live exchange rates in the background every 30 seconds
 if (typeof window !== "undefined") {
-  setTimeout(() => fetchLiveRates(), 1000);
-  setInterval(() => fetchLiveRates(), 30000);
+  setTimeout(() => void fetchLiveRates(), 1000);
+  setInterval(() => void fetchLiveRates(), 60000);
 }

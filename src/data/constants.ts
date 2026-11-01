@@ -9,7 +9,7 @@ export const KPB = {
   region: "Batam Free Trade Zone (KPBPB)",
   kodeKawasan: "ID-BTM-01",
   authority: "BP Batam",
-  regulation: "PP 156/2015 jo. PMK 111/PMK.04/2019",
+  regulation: "PP 10/2012 jo. PMK 47/PMK.04/2012",
   facilityForm: "PPFTZ-01",
   customsOffice: "BCTMP Batam (KPPBC TMP B Batu Ampar)",
   code: "051700",

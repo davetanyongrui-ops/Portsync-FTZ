@@ -1,179 +1,194 @@
 import { useState } from "react";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { Btn, Tag } from "./ui";
+import { SiteFooter } from "./SiteFooter";
+import type { Page } from "../App";
 
-export function PricingPage({ onNavigate }: { onNavigate: (p: any) => void }) {
+const PLANS = [
+  {
+    name: "Sandbox",
+    price: "Free",
+    cadence: "no account needed",
+    blurb: "Evaluate the engine against the three preloaded consignments.",
+    cta: "Open the terminal",
+    page: "terminal" as Page,
+    primary: false,
+    features: [
+      "Three preloaded invoices",
+      "BTKI classification with confidence",
+      "PPFTZ-01, 02 and 03 arithmetic",
+      "CEISA JSON and XML export",
+      "Runs entirely in the browser",
+    ],
+  },
+  {
+    name: "Broker",
+    price: "$39",
+    priceAlt: "$49",
+    cadence: "per user / month, billed annually",
+    blurb: "For a licensed PPJK desk preparing declarations every day.",
+    cta: "Start a 14-day trial",
+    page: "terminal" as Page,
+    primary: true,
+    features: [
+      "Everything in Sandbox",
+      "Unlimited document ingestion",
+      "Saved consignments and audit history",
+      "Pre-filing check templates",
+      "Priority register updates on BTKI changes",
+    ],
+  },
+  {
+    name: "Facility",
+    price: "Custom",
+    cadence: "annual contract",
+    blurb: "For manufacturers running their own in-house customs team.",
+    cta: "Talk to us",
+    page: "contact" as Page,
+    primary: false,
+    features: [
+      "Everything in Broker",
+      "Private deployment, your network",
+      "ERP and masterlist integration",
+      "Role-based access and signing trail",
+      "Named compliance contact",
+    ],
+  },
+];
+
+const FAQ = [
+  {
+    q: "What is the legal basis for duty suspension in Batam?",
+    a: "Government Regulation No. 41 of 2021 sets the KPBPB framework. Goods entering the zone have Bea Masuk, PPN and PPh 22 suspended while they remain inside the enclave; duty falls due on the share released to the customs area. The engine implements that split per line rather than as a blanket exemption.",
+  },
+  {
+    q: "Can the exported XML go straight into CEISA 4.0?",
+    a: "The document is shaped to the PPFTZ-01/4.2 interchange structure — element-per-value, CEISA4 namespace, permit elements per line — so it maps cleanly onto a gateway request body. It is not a signed declaration: submission still requires the licensed broker's electronic signature.",
+  },
+  {
+    q: "What happens when the classifier is unsure?",
+    a: "A line below 70% confidence raises a CLASS-LOW advisory and keeps the alternative headings visible in the editor. Nothing is blocked automatically, but the finding travels into the payload so the reviewer sees exactly which lines need a second look.",
+  },
+  {
+    q: "Is my invoice uploaded anywhere?",
+    a: "No. PDF text extraction, classification and duty arithmetic all run in the browser tab. This build has no upload endpoint, no analytics on document content, and stores only your theme preference.",
+  },
+];
+
+export function PricingPage({
+  onNavigate,
+  onOpenLegal,
+}: {
+  onNavigate: (p: Page) => void;
+  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+}) {
   const [annual, setAnnual] = useState(true);
 
-  const plans = [
-    {
-      name: "Starter / Evaluation",
-      price: "Free",
-      period: "forever",
-      desc: "For individual customs brokers and testing consignments.",
-      highlight: false,
-      features: [
-        "3 preloaded demo fixtures (Singapore, Shenzhen, Johor)",
-        "Deterministic BTKI 2026 classification",
-        "PPFTZ-01, PPFTZ-02, PPFTZ-03 regimes",
-        "CEISA 4.0 JSON & XML payload export",
-        "Local sandbox client-side execution",
-      ],
-      cta: "Launch Free Sandbox",
-      action: () => onNavigate("terminal"),
-    },
-    {
-      name: "Professional Broker",
-      price: annual ? "$39" : "$49",
-      period: "/ month",
-      desc: "For active customs PPJK agencies and logistics operators.",
-      highlight: true,
-      badge: "Most Popular",
-      features: [
-        "Everything in Starter, plus:",
-        "Unlimited document OCR ingestion (PDF/PNG)",
-        "3-Way Document Audit (Invoice vs P/L vs B/L)",
-        "AI Tariff & FTA Advisor (Form D/E & Masterlist)",
-        "Turso libSQL distributed session audit log",
-        "Priority Batam customs regulations updates",
-      ],
-      cta: "Start 14-Day Free Trial",
-      action: () => onNavigate("terminal"),
-    },
-    {
-      name: "Enterprise FTZ Facility",
-      price: "Custom",
-      period: "annual contract",
-      desc: "For large FTZ manufacturers, shipyards, and port authorities.",
-      highlight: false,
-      features: [
-        "Dedicated on-prem or private cloud instance",
-        "Direct CEISA 4.0 INSW API gateway connector",
-        "ERP integration (SAP S/4HANA, Oracle, Odoo)",
-        "Multi-user RBAC with digital signature audit",
-        "Dedicated Customs Compliance SLA & 24/7 Desk",
-      ],
-      cta: "Contact Enterprise Sales",
-      action: () => onNavigate("contact"),
-    },
-  ];
-
   return (
-    <div className="scroll-thin flex min-h-0 flex-1 flex-col overflow-y-auto bg-slate-50 text-slate-800 antialiased dark:bg-zinc-950 dark:text-zinc-100">
-      <section className="mx-auto w-full shrink-0 max-w-6xl px-6 py-12">
-        <div className="text-center max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-50 px-3.5 py-1 text-xs font-semibold text-blue-700 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300">
-            <Sparkles size={13} /> Transparent, Value-Driven Pricing
-          </div>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-            Choose the Plan Built for Your Operations
-          </h1>
-          <p className="mt-3 text-[14.5px] text-slate-600 dark:text-zinc-400">
-            Accelerate customs clearance, eliminate filing errors, and retain capital with automated Batam FTZ facilities.
+    <div className="bg-paper">
+      <section className="border-b border-line">
+        <div className="mx-auto max-w-[1120px] px-5 pt-12 pb-8 sm:px-8">
+          <div className="font-mono text-[10px] tracking-[0.1em] text-ink-3 uppercase">Pricing</div>
+          <h1 className="display mt-3 text-[32px] text-ink sm:text-[38px]">Priced per desk, not per declaration</h1>
+          <p className="mt-3 max-w-[520px] text-[13px] leading-[1.65] text-ink-2">
+            A declaration you have to redo costs more than the software. There is no per-filing fee and no charge for
+            lines you drop from the filing set.
           </p>
 
-          {/* Billing Switch */}
-          <div className="mt-8 inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-100 p-1.5 dark:border-zinc-800 dark:bg-zinc-900/80">
+          <div className="mt-6 inline-flex items-center rounded-[5px] border border-line bg-sunken p-[2px]">
             <button
               type="button"
               onClick={() => setAnnual(false)}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                !annual ? "bg-white text-slate-900 shadow-2xs font-semibold dark:bg-zinc-800 dark:text-white" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              className={`cursor-pointer rounded-[3px] px-2.5 py-1 text-[11.5px] transition-colors ${
+                !annual ? "bg-surface font-medium text-ink ring-1 ring-line" : "text-ink-3 hover:text-ink"
               }`}
             >
-              Monthly Billing
+              Monthly
             </button>
             <button
               type="button"
               onClick={() => setAnnual(true)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                annual ? "bg-emerald-600 text-white shadow-xs dark:bg-emerald-500 dark:text-zinc-950" : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              className={`cursor-pointer rounded-[3px] px-2.5 py-1 text-[11.5px] transition-colors ${
+                annual ? "bg-surface font-medium text-ink ring-1 ring-line" : "text-ink-3 hover:text-ink"
               }`}
             >
-              Annual Billing
-              <span className={`rounded px-1.5 py-0.5 text-[10px] ${annual ? "bg-emerald-700 text-white font-bold dark:bg-zinc-950 dark:text-emerald-400" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"}`}>
-                Save 20%
-              </span>
+              Annual
             </button>
+            <span className="px-1.5 font-mono text-[10px] text-ok">−20%</span>
           </div>
         </div>
+      </section>
 
-        {/* Pricing Cards */}
-        <div className="mt-12 grid gap-6 sm:grid-cols-3">
-          {plans.map((p) => (
+      <section className="mx-auto max-w-[1120px] px-5 py-10 sm:px-8">
+        <div className="grid overflow-hidden rounded-[7px] border border-line bg-surface lg:grid-cols-3">
+          {PLANS.map((p, i) => (
             <div
               key={p.name}
-              className={`flex flex-col justify-between rounded-2xl border p-6 transition-all ${
-                p.highlight
-                  ? "border-emerald-500/60 bg-white shadow-lg ring-1 ring-emerald-500/40 dark:border-emerald-500/50 dark:bg-gradient-to-b dark:from-zinc-900 dark:via-zinc-900 dark:to-emerald-950/20 dark:shadow-xl dark:shadow-emerald-500/10"
-                  : "border-slate-200 bg-white shadow-sm hover:border-slate-300 dark:border-zinc-800 dark:bg-zinc-900/60 dark:hover:border-zinc-700"
+              className={`flex flex-col p-5 ${i < PLANS.length - 1 ? "border-b border-line lg:border-r lg:border-b-0" : ""} ${
+                p.primary ? "bg-sunken/40" : ""
               }`}
             >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[14px] font-bold text-slate-900 dark:text-zinc-100">{p.name}</span>
-                  {p.badge && (
-                    <span className="rounded-full border border-emerald-500/40 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400">
-                      {p.badge}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{p.price}</span>
-                  <span className="text-xs text-slate-500 dark:text-zinc-400">{p.period}</span>
-                </div>
-                <p className="mt-2 text-[12.5px] text-slate-600 leading-relaxed dark:text-zinc-400">{p.desc}</p>
-
-                <ul className="mt-6 space-y-2.5 border-t border-slate-100 pt-5 dark:border-zinc-800/80">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-[12.5px] text-slate-700 dark:text-zinc-300">
-                      <Check size={14} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div className="flex items-center gap-2">
+                <span className="text-[12.5px] font-medium text-ink">{p.name}</span>
+                {p.primary && <Tag tone="ok">recommended</Tag>}
               </div>
 
-              <button
-                type="button"
-                onClick={p.action}
-                className={`mt-8 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition-all cursor-pointer ${
-                  p.highlight
-                    ? "bg-emerald-600 text-white shadow-xs hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
-                    : "border border-slate-300 bg-slate-50 text-slate-800 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                }`}
+              <div className="mt-4 flex items-baseline gap-1.5">
+                <span className="display text-[30px] text-ink">{annual ? p.price : (p.priceAlt ?? p.price)}</span>
+                {p.price !== "Custom" && p.price !== "Free" && (
+                  <span className="text-[11px] text-ink-3">/mo</span>
+                )}
+              </div>
+              <div className="mt-1 font-mono text-[10px] text-ink-3">{p.cadence}</div>
+              <p className="mt-3 text-[11.5px] leading-[1.6] text-ink-2">{p.blurb}</p>
+
+              <ul className="mt-5 flex-1 space-y-1.5 border-t border-line pt-4">
+                {p.features.map((f) => (
+                  <li key={f} className="flex gap-2 text-[11.5px] leading-[1.5] text-ink-2">
+                    <span className="mt-[7px] size-[3px] shrink-0 rounded-full bg-line-strong" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <Btn
+                variant={p.primary ? "primary" : "secondary"}
+                block
+                className="mt-5"
+                iconRight={ArrowRight}
+                onClick={() => onNavigate(p.page)}
               >
-                {p.cta} <ArrowRight size={13} />
-              </button>
+                {p.cta}
+              </Btn>
             </div>
           ))}
         </div>
 
-        {/* FAQ Section */}
-        <div className="mt-16 max-w-3xl mx-auto border-t border-slate-200 pt-12 dark:border-zinc-800/80">
-          <h2 className="text-xl font-bold text-slate-900 text-center dark:text-white">Frequently Asked Questions</h2>
-          <div className="mt-6 space-y-4">
-            {[
-              {
-                q: "What is the legal basis for the 100% duty exemption in Batam?",
-                a: "Under Government Regulation PP No. 41/2021 (implementing the KPBPB Free Trade Zone statutory framework), goods imported into Batam are granted suspension of Bea Masuk, PPN 11%, and PPh Pasal 22 while remaining inside the designated bonded enclave.",
-              },
-              {
-                q: "Can I submit the generated XML directly into CEISA 4.0?",
-                a: "Yes. The generated CEISA XML payload complies with the official EDI schema of the Directorate General of Customs and Excise (DJBC) Batam. You can paste the payload or upload the XML file into your CEISA 4.0 gateway.",
-              },
-              {
-                q: "How does the broker override feature work?",
-                a: "While the BTKI engine classifies items automatically with high precision, customs brokers retain the statutory authority to override any HS code. The engine immediately recomputes the MFN vs FTZ duty breakdown and logs the decision with an idempotency key.",
-              },
-            ].map((faq) => (
-              <div key={faq.q} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-                <div className="text-[13.5px] font-semibold text-slate-900 dark:text-zinc-200">{faq.q}</div>
-                <div className="mt-2 text-[12.5px] text-slate-600 leading-relaxed dark:text-zinc-400">{faq.a}</div>
-              </div>
+        <p className="mt-3 font-mono text-[10px] text-ink-3">
+          Prices in USD, excluding Indonesian VAT. The sandbox tier is the build you are looking at — no card, no signup.
+        </p>
+      </section>
+
+      <section className="border-t border-line">
+        <div className="mx-auto max-w-[1120px] px-5 py-10 sm:px-8">
+          <div className="max-w-[720px]">
+          <h2 className="text-[13px] font-medium text-ink">Questions that come up before a trial</h2>
+          <div className="mt-4 border-t border-line">
+            {FAQ.map((f) => (
+              <details key={f.q} className="group border-b border-line">
+                <summary className="flex cursor-pointer list-none items-center gap-3 py-3 text-[12.5px] text-ink transition-colors hover:text-ink-2">
+                  <span className="text-[10px] text-ink-3 transition-transform group-open:rotate-45">+</span>
+                  {f.q}
+                </summary>
+                <p className="pb-3 pl-5 text-[11.5px] leading-[1.7] text-ink-2">{f.a}</p>
+              </details>
             ))}
+          </div>
           </div>
         </div>
       </section>
+
+      <SiteFooter onNavigate={onNavigate} onOpenLegal={onOpenLegal} />
     </div>
   );
 }

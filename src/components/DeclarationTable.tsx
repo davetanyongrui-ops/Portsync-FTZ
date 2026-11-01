@@ -1,22 +1,44 @@
 import { useMemo, type ReactNode } from "react";
-import { ArrowDownRight, Info, Lock, ScanLine } from "lucide-react";
-import type { LineCalc } from "../types";
+import { Lock } from "lucide-react";
+import type { LineCalc, RegulatoryBadge } from "../types";
 import { hsOptions } from "../lib/engine";
+import { REGISTER_SIZE, TARIFF } from "../data/tariff";
 import { fmtIdrShort, fmtQty, fmtUsd } from "../lib/format";
 import { cn } from "../lib/cn";
-import { Checkbox, Pill, RegBadgeView, TONE_DOT, confidenceTone } from "./ui";
+import { Checkbox, RegBadgeView, Tag } from "./ui";
 
 const RISK_EDGE: Record<string, string> = {
-  HIGH: "border-l-rose-500",
-  MEDIUM: "border-l-amber-500",
-  LOW: "border-l-emerald-500",
+  HIGH: "border-l-bad",
+  MEDIUM: "border-l-warn",
+  LOW: "border-l-transparent",
 };
 
 const TH =
-  "sticky top-0 z-10 bg-slate-100/95 px-4 py-3 text-left text-xs font-semibold tracking-wider whitespace-nowrap text-slate-700 uppercase border-b border-slate-200 dark:bg-zinc-900/95 dark:text-zinc-300 dark:border-zinc-800";
-const TD = "relative px-4 py-3.5";
+  "sticky top-0 z-10 border-b border-line bg-surface px-2.5 py-2 text-left text-[10px] font-semibold tracking-[0.07em] whitespace-nowrap text-ink-3 uppercase";
+const TD = "px-2.5 py-2 align-top";
 
-const COLS = ["w-[44px]", "w-[22%]", "w-[25%]", "w-[11%]", "w-[18%]"];
+const COLS = ["34px", "auto", "20%", "12%", "15%", "15%"];
+
+/** Dense table gets the terse flag wording; the full sentence stays in the tooltip and Advisory tab. */
+const SHORT_FLAG: Partial<Record<RegulatoryBadge["kind"], string>> = {
+  facility: "FTZ active",
+  tpbd: "TPBD",
+  "lartas-pre": "Lartas pre",
+  "lartas-post": "Lartas post",
+  sni: "SNI",
+  preference: "FTA rate",
+  excise: "Excise",
+  unclassified: "No heading",
+  "rate-range": "Rate range",
+  ad: "Anti-dumping",
+  tkdn: "TKDN",
+  asset: "Asset",
+};
+
+function flagLabel(b: RegulatoryBadge) {
+  const short = SHORT_FLAG[b.kind];
+  return short ? { ...b, label: short } : b;
+}
 
 function Th({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -44,8 +66,13 @@ function Row({
   onToggleMasterlist?: (id: string) => void;
 }) {
   const options = useMemo(() => hsOptions(c.line), [c.line]);
-  const visibleBadges = c.badges.slice(0, 3);
-  const hidden = c.badges.length - visibleBadges.length;
+  /** Everything in the register, so a wrong or missing heading can be corrected here. */
+  const rest = useMemo(() => {
+    const suggested = new Set(options.map((o) => o.hs));
+    return TARIFF.filter((e) => !suggested.has(e.hs));
+  }, [options]);
+  const visible = c.badges.slice(0, 2);
+  const hidden = c.badges.length - visible.length;
 
   return (
     <tr
@@ -54,13 +81,9 @@ function Row({
       data-selected={selected ? "true" : "false"}
       onClick={() => onActive(active ? null : c.id)}
       className={cn(
-        "cursor-pointer border-l-3 align-top transition-all duration-150 border-b border-slate-200/70 dark:border-zinc-800/60",
+        "cursor-pointer border-b border-l-2 border-b-line align-top transition-colors",
         RISK_EDGE[c.risk],
-        active
-          ? "bg-blue-50/90 shadow-[inset_0_0_12px_rgba(37,99,235,0.08)] dark:bg-cyan-500/10 dark:shadow-[inset_0_0_12px_rgba(6,182,212,0.15)]"
-          : selected
-            ? "hover:bg-slate-50/90 dark:hover:bg-zinc-800/40"
-            : "opacity-45 hover:opacity-90 bg-slate-100/30 dark:bg-zinc-950/40",
+        active ? "bg-brand-soft" : selected ? "hover:bg-sunken/60" : "bg-sunken/40 hover:bg-sunken/70",
       )}
     >
       <td className={TD} onClick={(e) => e.stopPropagation()}>
@@ -68,31 +91,32 @@ function Row({
       </td>
 
       <td className={TD}>
-        <div className="flex items-start gap-2.5">
-          <span className="tnum mt-0.5 shrink-0 font-mono text-[11px] font-semibold text-slate-400 dark:text-zinc-500">
+        <div className="flex items-start gap-2">
+          <span className="tnum mt-px w-4 shrink-0 font-mono text-[10.5px] text-ink-3">
             {String(c.pos).padStart(2, "0")}
           </span>
-          <div className="min-w-0 flex-1">
-            <div title={c.line.raw} className="text-[13.5px] font-semibold leading-snug text-slate-900 dark:text-zinc-100">
+          <div className="min-w-0">
+            <div
+              title={c.line.raw}
+              className={cn(
+                "line-clamp-2 text-[12px] leading-[1.45]",
+                selected ? "text-ink" : "text-ink-2",
+              )}
+            >
               {c.line.raw}
             </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px] text-slate-500 dark:text-zinc-400">
-              <span className="font-mono font-medium text-slate-700 dark:text-zinc-300">{c.line.supplierRef}</span>
-              <span>·</span>
-              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
-                {c.line.origin}
+            <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono text-[10px] text-ink-3">
+              <span>{c.line.supplierRef}</span>
+              <span className="text-line-strong">/</span>
+              <span>{c.line.origin}</span>
+              <span className="text-line-strong">/</span>
+              <span className="tnum">
+                {fmtQty(c.qty)} {c.uom}
+                {c.line.netKg > 0 && <> · {c.line.netKg} kg</>}
               </span>
-              <span>·</span>
-              <span className="tnum font-medium text-slate-600 dark:text-zinc-300">
-                {fmtQty(c.qty)} {c.uom} ({c.line.netKg} kg)
-              </span>
-              {c.line.ocrNote && (
-                <span
-                  className="ml-1 inline-flex items-center gap-1 rounded bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
-                  title={c.line.ocrNote}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <ScanLine size={11} /> OCR Note
+              {c.blocked && (
+                <span className="inline-flex items-center gap-1 text-bad">
+                  <Lock size={9} strokeWidth={2.5} /> blocked
                 </span>
               )}
             </div>
@@ -104,136 +128,223 @@ function Row({
         <label className="sr-only" htmlFor={`ovr-${c.id}`}>
           Edit HS code for line {c.pos}
         </label>
-        <div className="relative">
-          <select
-            id={`ovr-${c.id}`}
-            value={c.hs}
-            onChange={(e) => onOverride(c.id, e.target.value)}
-            title={c.overridden ? "Broker override — re-mapped by hand" : "Agent's top BTKI match"}
-            className={cn(
-              "w-full cursor-pointer appearance-none truncate rounded-lg border px-3 py-1.5 pr-7 font-mono text-[12.5px] font-semibold shadow-2xs transition-colors",
-              c.overridden
-                ? "border-amber-400 bg-amber-50 text-amber-950 dark:border-amber-500/50 dark:bg-zinc-900 dark:text-amber-300"
-                : "border-slate-300 bg-white text-blue-800 hover:border-slate-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-cyan-300 dark:hover:border-zinc-600",
-            )}
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 8px center",
-            }}
-          >
-            {options.map((o) => (
-              <option key={o.hs} value={o.hs} disabled={!o.registered}>
-                {o.hs} {o.registered ? `${Math.round(o.confidence * 100)}% Match` : "· not in register"}
+        <select
+          id={`ovr-${c.id}`}
+          value={c.hs}
+          onChange={(e) => onOverride(c.id, e.target.value)}
+          title={c.overridden ? "Broker override — re-mapped by hand" : "Agent's top BTKI match"}
+          className={cn(
+            "w-full cursor-pointer appearance-none rounded-[4px] border py-[3px] pr-5 pl-1.5 font-mono text-[11.5px] font-semibold transition-colors",
+            c.overridden
+              ? "border-warn/50 bg-warn-soft text-warn"
+              : "border-line-strong bg-surface text-ink hover:border-ink-3",
+          )}
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%2383858b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 6px center",
+          }}
+        >
+          <option value="">— assign a heading —</option>
+          {options.length > 0 && (
+            <optgroup label="Suggested">
+              {options.map((o) => (
+                <option key={o.hs} value={o.hs}>
+                  {o.hs} · {Math.round(o.confidence * 100)}%
+                </option>
+              ))}
+            </optgroup>
+          )}
+          <optgroup label={`Register (${rest.length})`}>
+            {rest.map((e) => (
+              <option key={e.hs} value={e.hs}>
+                {e.hs} · {e.titleEn.slice(0, 54)}
               </option>
             ))}
-          </select>
+          </optgroup>
+        </select>
+        <div
+          className={cn(
+            "mt-1 truncate text-[10.5px] leading-tight",
+            c.unclassified ? "text-bad" : "text-ink-3",
+          )}
+          title={c.entry.titleEn}
+        >
+          {c.unclassified ? "No heading matched — pick one" : c.entry.titleEn}
         </div>
-
-        <div className="mt-2 flex min-w-0 items-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-1">
           <span
-            className={cn("size-2 shrink-0 rounded-full", TONE_DOT[confidenceTone(c.confidence)])}
-            title={`${Math.round(c.confidence * 100)}% — classifier agreement with the BTKI register`}
-          />
-          <span className="truncate text-[12px] font-medium text-slate-600 dark:text-zinc-400" title={c.entry.titleEn}>
-            {c.entry.titleEn}
-          </span>
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {c.overridden && (
-            <Pill tone="warn">
-              broker override
-            </Pill>
-          )}
-          {c.isAsset && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <label className="inline-flex items-center gap-1.5 cursor-pointer rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800">
-                <input
-                  type="checkbox"
-                  checked={Boolean(c.hasMasterlist)}
-                  onChange={() => onToggleMasterlist?.(c.id)}
-                  className="size-3 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900"
-                />
-                <span>BP Batam Masterlist</span>
-              </label>
-            </div>
-          )}
-          <div className="tnum text-[11.5px] font-medium">
-            {c.blocked ? (
-              <span className="inline-flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
-                <Lock size={11} /> blocked (Lartas)
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-400">
-                <span className="size-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> filable
-              </span>
+            className={cn(
+              "font-mono text-[9.5px]",
+              c.confidence >= 0.92 ? "text-ok" : c.confidence >= 0.75 ? "text-ink-3" : "text-warn",
             )}
-          </div>
+          >
+            {Math.round(c.confidence * 100)}% match
+          </span>
+          {c.overridden && <Tag tone="warn">override</Tag>}
         </div>
       </td>
 
-      <td className={cn(TD, "tnum text-right whitespace-nowrap")}>
-        <div className="text-[14px] font-bold text-slate-900 dark:text-zinc-100">
-          ${fmtUsd(c.usdCif).replace("$ ", "")}
-        </div>
-        <div className="mt-1 font-semibold text-[12px] text-slate-600 dark:text-zinc-400">
-          {fmtIdrShort(c.idrCif)}
-        </div>
-        <div className="mt-1 text-[11.5px] text-slate-400 dark:text-zinc-500">
-          @ ${fmtUsd(c.unitCifUsd).replace("$ ", "")}/u
-        </div>
+      <td className={cn(TD, "text-right")}>
+        <div className="tnum text-[12.5px] font-medium text-ink">${fmtUsd(c.usdCif).replace("$ ", "")}</div>
+        <div className="tnum mt-0.5 font-mono text-[10px] text-ink-3">{fmtIdrShort(c.idrCif)}</div>
       </td>
 
       <td className={TD}>
-        <div className="tnum text-[12px] text-slate-600 dark:text-zinc-400">
-          Std <span className="font-semibold text-slate-800 dark:text-zinc-200">{Math.round(c.bmRate * 100)}% BM</span> +{" "}
-          <span className="font-semibold text-slate-800 dark:text-zinc-200">{Math.round(c.ppnRate * 100)}% PPN</span>
-          {c.bmadRate > 0 ? ` + ${Math.round(c.bmadRate * 100)}% BMAD` : ""}
-        </div>
-        <div className="tnum mt-1.5 flex items-center gap-1.5 text-[12.5px] font-bold">
-          <ArrowDownRight
-            size={13}
-            className={c.coverage === 1 ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}
-          />
-          <span className={c.coverage === 1 ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}>
-            FTZ {Math.round(c.bmRate * (1 - c.coverage) * 100)}% + {Math.round(c.ppnRate * (1 - c.coverage) * 100)}%
-          </span>
-        </div>
-        <div className="tnum mt-1.5 flex flex-wrap items-center gap-x-2.5 text-[12px]">
-          <span className="font-semibold text-emerald-700 dark:text-emerald-400">saved {fmtIdrShort(c.saved)}</span>
-          {c.payable > 0 && (
-            <span className="font-semibold text-amber-700 dark:text-amber-400">due {fmtIdrShort(c.payable)}</span>
+        <div className="tnum font-mono text-[10.5px] text-ink-2">
+          {c.unclassified ? (
+            <span className="text-bad">no rate</span>
+          ) : (
+            <>
+              {Math.round(c.bmRate * 100)}% BM
+              {c.pref && (
+                <span className="text-ok" title={`MFN would be ${Math.round(c.bmMfnRate * 100)}%`}>
+                  {" "}
+                  · {c.pref.form}
+                </span>
+              )}
+              {c.bmadRate > 0 && <span className="text-bad"> +{Math.round(c.bmadRate * 100)}% AD</span>}
+              <span className="text-ink-3"> · {Math.round(c.ppnRate * 100)}% PPN</span>
+            </>
           )}
         </div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-[10px]">
+          {c.unclassified ? (
+            <span className="text-bad">unpriced</span>
+          ) : c.ftz.total === 0 ? (
+            <span className="text-ok">suspended</span>
+          ) : (
+            <span className="text-warn">due {fmtIdrShort(c.ftz.total)}</span>
+          )}
+          {c.deferred > 0 && <span className="text-ink-3">held {fmtIdrShort(c.deferred)}</span>}
+        </div>
       </td>
 
-      <td className={TD}>
-        <div className="flex flex-wrap gap-1.5">
-          {visibleBadges.map((b) => (
-            <RegBadgeView key={b.label} badge={b} />
+      <td className={TD} onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap gap-1">
+          {visible.map((b) => (
+            <RegBadgeView key={b.label} badge={flagLabel(b)} />
           ))}
           {hidden > 0 && (
-            <Pill
-              tone="mut"
-              title={c.badges
-                .slice(3)
-                .map((b) => `${b.label}: ${b.detail}`)
-                .join("\n\n")}
-              className="cursor-help"
-            >
+            <Tag title={c.badges.slice(2).map((b) => `${b.label}: ${b.detail}`).join("\n\n")} className="cursor-help">
               +{hidden}
-            </Pill>
+            </Tag>
           )}
-          {c.badges.length === 0 && <span className="text-[12px] text-slate-400 dark:text-zinc-500">None</span>}
+          {c.badges.length === 0 && <span className="font-mono text-[10px] text-ink-3">none</span>}
         </div>
-        <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[11.5px] text-slate-500 dark:text-zinc-400">
-          <Info size={12} className="shrink-0 text-slate-400 dark:text-zinc-500" />
-          <span className="truncate">{c.fta.scheme.replace(" — ", "/")}</span>
-        </div>
+        {c.isAsset && (
+          <label className="mt-1.5 inline-flex cursor-pointer items-center gap-1.5 text-[10px] text-ink-2">
+            <input
+              type="checkbox"
+              checked={Boolean(c.hasMasterlist)}
+              onChange={() => onToggleMasterlist?.(c.id)}
+              className="size-[11px] accent-[#17181a]"
+            />
+            masterlist
+          </label>
+        )}
       </td>
     </tr>
+  );
+}
+
+/** Narrow-screen equivalent of a table row — the same data, stacked. */
+function StackedRow({
+  c,
+  selected,
+  active,
+  onActive,
+  onToggle,
+  onOverride,
+}: {
+  c: LineCalc;
+  selected: boolean;
+  active: boolean;
+  onActive: (id: string | null) => void;
+  onToggle: (id: string) => void;
+  onOverride: (id: string, hs: string) => void;
+}) {
+  const options = useMemo(() => hsOptions(c.line), [c.line]);
+
+  return (
+    <div
+      data-line={c.id}
+      data-risk={c.risk}
+      data-selected={selected ? "true" : "false"}
+      onClick={() => onActive(active ? null : c.id)}
+      className={cn(
+        "cursor-pointer border-b border-l-2 border-b-line px-2.5 py-2.5",
+        RISK_EDGE[c.risk],
+        active ? "bg-brand-soft" : selected ? "bg-surface" : "bg-sunken/40",
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <span onClick={(e) => e.stopPropagation()} className="mt-0.5">
+          <Checkbox checked={selected} onChange={() => onToggle(c.id)} label={`File line ${c.pos}`} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex gap-1.5">
+            <span className="tnum mt-px shrink-0 font-mono text-[10px] text-ink-3">
+              {String(c.pos).padStart(2, "0")}
+            </span>
+            <span className={cn("text-[12px] leading-[1.4]", selected ? "text-ink" : "text-ink-2")}>{c.line.raw}</span>
+          </div>
+
+          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 font-mono text-[9.5px] text-ink-3">
+            <span>{c.line.supplierRef}</span>
+            <span className="text-line-strong">/</span>
+            <span>{c.line.origin}</span>
+            <span className="text-line-strong">/</span>
+            <span className="tnum">
+              {fmtQty(c.qty)} {c.uom}
+            </span>
+          </div>
+
+          <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <select
+              value={c.hs}
+              onChange={(e) => onOverride(c.id, e.target.value)}
+              aria-label={`HS code for line ${c.pos}`}
+              className={cn(
+                "min-w-0 flex-1 cursor-pointer rounded-[4px] border bg-surface px-1.5 py-1 font-mono text-[11px] font-semibold",
+                c.overridden ? "border-warn/50 bg-warn-soft text-warn" : "border-line-strong text-ink",
+              )}
+            >
+              {options.map((o) => (
+                <option key={o.hs} value={o.hs} disabled={!o.registered}>
+                  {o.hs} {o.registered ? `${Math.round(o.confidence * 100)}%` : "· unregistered"}
+                </option>
+              ))}
+            </select>
+            <span className="tnum shrink-0 font-mono text-[11.5px] font-medium text-ink">
+              ${fmtUsd(c.usdCif).replace("$ ", "")}
+            </span>
+          </div>
+
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[9.5px]">
+            <span className="text-ink-2">
+              {Math.round(c.bmRate * 100)}% BM · {Math.round(c.ppnRate * 100)}% PPN
+            </span>
+            {c.payable === 0 ? (
+              <span className="text-ok">exempt</span>
+            ) : (
+              <span className="text-warn">due {fmtIdrShort(c.payable)}</span>
+            )}
+            <span className="text-ink-3">saves {fmtIdrShort(c.saved)}</span>
+          </div>
+
+          {c.badges.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {c.badges.slice(0, 3).map((b) => (
+                <RegBadgeView key={b.label} badge={b} />
+              ))}
+              {c.badges.length > 3 && <Tag>+{c.badges.length - 3}</Tag>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -260,59 +371,85 @@ export function DeclarationTable({
 }) {
   if (!ready) {
     return (
-      <div className="flex min-h-[320px] flex-1 flex-col items-center justify-center gap-3.5 rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs dark:border-zinc-800 dark:bg-zinc-900/40">
-        <div className="grid size-12 place-items-center rounded-xl border border-slate-200 bg-slate-100 text-slate-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
-          <ScanLine size={22} />
-        </div>
-        <div className="text-[14px] font-semibold text-slate-900 dark:text-zinc-100">Declaration engine idle</div>
-        <div className="max-w-[420px] text-[13px] leading-relaxed text-slate-500 dark:text-zinc-400">
-          Select or drop a shipping manifest on the left, then click{" "}
-          <strong className="font-semibold text-slate-800 dark:text-zinc-200">Analyze &amp; Map to BTKI Tariff</strong>. Mapped 8-digit tariff lines, duty avoidance math, and CEISA validation reports will populate here.
+      <div className="flex h-full flex-col items-center justify-center px-8 py-16 text-center">
+        <div className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">Engine idle</div>
+        <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-ink-2">
+          Load an invoice on the left and run{" "}
+          <span className="font-medium text-ink">Analyze &amp; map</span>. Each line item is matched against the{" "}
+          {REGISTER_SIZE}-heading register, priced at the MFN rate that applies to its heading and at any preferential
+          rate its origin qualifies for, then screened for lartas and SNI obligations. Duty treatment then follows the
+          entry point you select.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+          {["BTKI 2022", "PP 10/2012", "PMK 47/PMK.04/2012", "CEISA 4.0"].map((t) => (
+            <Tag key={t}>{t}</Tag>
+          ))}
         </div>
       </div>
     );
   }
 
   const allSelected = calcs.every((c) => selectedIds.has(c.id));
+  const someSelected = calcs.some((c) => selectedIds.has(c.id));
 
   return (
-    <div className="scroll-thin min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-950/60">
-      <table className="w-full min-w-[760px] table-fixed border-collapse">
-        <colgroup>
-          {COLS.map((w) => (
-            <col key={w} className={w} />
-          ))}
-          <col />
-        </colgroup>
-        <thead>
-          <tr>
-            <Th className="w-12 pr-0">
-              <span onClick={(e) => e.stopPropagation()}>
-                <Checkbox checked={allSelected} onChange={() => onSelectAll(!allSelected)} label="Select all lines" />
-              </span>
-            </Th>
-            <Th>Raw item description</Th>
-            <Th>BTKI / HS · override</Th>
-            <Th className="text-right">CIF (USD)</Th>
-            <Th>Standard vs FTZ rate</Th>
-            <Th>Regulatory tag</Th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-200/80 dark:divide-zinc-800/60">
-          {calcs.map((c) => (
-            <Row
-              key={c.id}
-              c={c}
-              selected={selectedIds.has(c.id)}
-              active={activeId === c.id}
-              onActive={onActive}
-              onToggle={onToggle}
-              onOverride={onOverride}
-              onToggleMasterlist={onToggleMasterlist}
-            />
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="scroll-thin hidden h-full overflow-auto md:block">
+        <table className="w-full min-w-[660px] table-fixed border-collapse">
+          <colgroup>
+            {COLS.map((w, i) => (
+              <col key={i} style={{ width: w }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              <Th className="pr-0">
+                <span onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={allSelected}
+                    indeterminate={someSelected && !allSelected}
+                    onChange={() => onSelectAll(!allSelected)}
+                    label="Select all lines"
+                  />
+                </span>
+              </Th>
+              <Th>Line item</Th>
+              <Th>BTKI heading</Th>
+              <Th className="text-right">CIF value</Th>
+              <Th>Duty</Th>
+              <Th>Flags</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {calcs.map((c) => (
+              <Row
+                key={c.id}
+                c={c}
+                selected={selectedIds.has(c.id)}
+                active={activeId === c.id}
+                onActive={onActive}
+                onToggle={onToggle}
+                onOverride={onOverride}
+                onToggleMasterlist={onToggleMasterlist}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="scroll-thin h-full overflow-y-auto md:hidden">
+        {calcs.map((c) => (
+          <StackedRow
+            key={c.id}
+            c={c}
+            selected={selectedIds.has(c.id)}
+            active={activeId === c.id}
+            onActive={onActive}
+            onToggle={onToggle}
+            onOverride={onOverride}
+          />
+        ))}
+      </div>
+    </>
   );
 }

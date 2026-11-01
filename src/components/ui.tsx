@@ -1,10 +1,11 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  AlertCircle,
   AlertTriangle,
-  ArrowRightLeft,
+  ArrowLeftRight,
   BadgeCheck,
+  CircleAlert,
+  CircleHelp,
   Factory,
   Lock,
   Percent,
@@ -14,83 +15,13 @@ import {
 import { cn } from "../lib/cn";
 import type { RegulatoryBadge } from "../types";
 
-export type Tone = "good" | "warn" | "bad" | "brand" | "iris" | "mut";
-
-const TONE: Record<Tone, string> = {
-  good: "border-emerald-500/30 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30",
-  warn: "border-amber-500/30 bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30",
-  bad: "border-rose-500/30 bg-rose-50 text-rose-800 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30",
-  brand: "border-blue-500/30 bg-blue-50 text-blue-800 dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/30",
-  iris: "border-violet-500/30 bg-violet-50 text-violet-800 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/30",
-  mut: "border-slate-200 bg-slate-100 text-slate-600 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400",
-};
-
-export function Pill({
-  tone = "mut",
-  children,
-  className,
-  title,
-}: {
-  tone?: Tone;
-  children: ReactNode;
-  className?: string;
-  title?: string;
-}) {
-  return (
-    <span
-      title={title}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium leading-none whitespace-nowrap transition-colors",
-        TONE[tone],
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-const BADGE_VIEW: Record<RegulatoryBadge["kind"], { tone: Tone; icon: LucideIcon }> = {
-  facility: { tone: "good", icon: ShieldCheck },
-  tpbd: { tone: "warn", icon: ArrowRightLeft },
-  "lartas-pre": { tone: "bad", icon: Lock },
-  "lartas-post": { tone: "warn", icon: Radar },
-  sni: { tone: "iris", icon: BadgeCheck },
-  ad: { tone: "bad", icon: Percent },
-  tkdn: { tone: "brand", icon: Factory },
-  excise: { tone: "bad", icon: AlertTriangle },
-  asset: { tone: "warn", icon: AlertCircle },
-};
-
-export function RegBadgeView({ badge }: { badge: RegulatoryBadge }) {
-  const view = BADGE_VIEW[badge.kind];
-  const Icon = view.icon;
-  return (
-    <Pill tone={view.tone} title={badge.detail} className="cursor-help">
-      <Icon size={11} strokeWidth={2.4} />
-      {badge.label}
-    </Pill>
-  );
-}
-
-export const TONE_DOT: Record<Tone, string> = {
-  good: "bg-emerald-500 dark:bg-emerald-400",
-  warn: "bg-amber-500 dark:bg-amber-400",
-  bad: "bg-rose-500 dark:bg-rose-400",
-  brand: "bg-blue-500 dark:bg-cyan-400",
-  iris: "bg-violet-500 dark:bg-violet-400",
-  mut: "bg-slate-400 dark:bg-zinc-500",
-};
-
-/** Classifier agreement with the BTKI register - colour only, so a figure never prints twice. */
-export const confidenceTone = (value: number): Tone => {
-  const pct = Math.round(value * 100);
-  return pct >= 92 ? "good" : pct >= 75 ? "brand" : pct >= 60 ? "warn" : "bad";
-};
+/* ------------------------------------------------------------------ */
+/* Buttons                                                             */
+/* ------------------------------------------------------------------ */
 
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost";
-  size?: "sm" | "md";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+  size?: "xs" | "sm" | "md";
   icon?: LucideIcon;
   iconRight?: LucideIcon;
   block?: boolean;
@@ -98,11 +29,19 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const BTN: Record<NonNullable<BtnProps["variant"]>, string> = {
   primary:
-    "border-emerald-600 bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-500 hover:shadow disabled:hover:bg-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400",
+    "border-ink bg-ink text-paper hover:opacity-88 active:opacity-100 shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]",
   secondary:
-    "border-slate-300 bg-white text-slate-800 shadow-2xs hover:bg-slate-50 hover:border-slate-400 hover:text-slate-900 dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:border-zinc-600 dark:hover:text-white",
+    "border-line-strong bg-surface text-ink hover:bg-sunken hover:border-ink-3",
   ghost:
-    "border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100",
+    "border-transparent bg-transparent text-ink-2 hover:bg-sunken hover:text-ink",
+  danger:
+    "border-bad/40 bg-bad-soft text-bad hover:border-bad",
+};
+
+const SIZE: Record<NonNullable<BtnProps["size"]>, string> = {
+  xs: "h-7 px-2 gap-1.5 text-[11.5px]",
+  sm: "h-8 px-2.5 gap-1.5 text-[12px]",
+  md: "h-9.5 px-3.5 gap-2 text-[13px]",
 };
 
 export function Btn({
@@ -117,33 +56,105 @@ export function Btn({
 }: BtnProps) {
   return (
     <button
+      type="button"
       {...rest}
       className={cn(
-        "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border text-[13px] tracking-tight whitespace-nowrap transition-all duration-150 select-none",
-        "disabled:cursor-not-allowed disabled:opacity-40 active:translate-y-px",
-        size === "sm" ? "h-8.5 px-3 text-[12px]" : "h-10 px-4",
+        "inline-flex shrink-0 cursor-pointer items-center justify-center rounded-[5px] border font-medium tracking-[-0.005em] whitespace-nowrap transition-[background-color,border-color,opacity,color] duration-120 select-none",
+        "disabled:cursor-not-allowed disabled:opacity-35",
+        SIZE[size],
         BTN[variant],
         block && "w-full",
         className,
       )}
     >
-      {Icon && <Icon size={size === "sm" ? 13 : 15} strokeWidth={2.2} />}
+      {Icon && <Icon size={size === "md" ? 14 : 13} strokeWidth={2} />}
       {children}
-      {IconRight && <IconRight size={size === "sm" ? 13 : 15} strokeWidth={2.2} />}
+      {IconRight && <IconRight size={size === "md" ? 14 : 13} strokeWidth={2} />}
     </button>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Tags — statutory state only                                         */
+/* ------------------------------------------------------------------ */
+
+export type Tone = "neutral" | "ok" | "warn" | "bad" | "brand";
+
+const TAG: Record<Tone, string> = {
+  neutral: "border-line bg-sunken text-ink-2",
+  ok: "border-ok/25 bg-ok-soft text-ok",
+  warn: "border-warn/25 bg-warn-soft text-warn",
+  bad: "border-bad/25 bg-bad-soft text-bad",
+  brand: "border-brand/20 bg-brand-soft text-brand",
+};
+
+export function Tag({
+  tone = "neutral",
+  children,
+  className,
+  title,
+}: {
+  tone?: Tone;
+  children: ReactNode;
+  className?: string;
+  title?: string;
+}) {
+  return (
+    <span
+      title={title}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-[3px] border px-1.5 py-[1.5px] text-[10.5px] leading-[15px] font-medium whitespace-nowrap",
+        TAG[tone],
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+const BADGE_VIEW: Record<RegulatoryBadge["kind"], { tone: Tone; icon: LucideIcon }> = {
+  facility: { tone: "ok", icon: ShieldCheck },
+  tpbd: { tone: "warn", icon: ArrowLeftRight },
+  "lartas-pre": { tone: "bad", icon: Lock },
+  "lartas-post": { tone: "warn", icon: Radar },
+  sni: { tone: "brand", icon: BadgeCheck },
+  ad: { tone: "bad", icon: Percent },
+  tkdn: { tone: "brand", icon: Factory },
+  excise: { tone: "bad", icon: AlertTriangle },
+  asset: { tone: "warn", icon: CircleAlert },
+  unclassified: { tone: "bad", icon: CircleHelp },
+  preference: { tone: "ok", icon: Percent },
+  "rate-range": { tone: "warn", icon: CircleAlert },
+};
+
+export function RegBadgeView({ badge }: { badge: RegulatoryBadge }) {
+  const view = BADGE_VIEW[badge.kind];
+  const Icon = view.icon;
+  return (
+    <Tag tone={view.tone} title={badge.detail} className="cursor-help">
+      <Icon size={10} strokeWidth={2.2} />
+      {badge.label}
+    </Tag>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Small controls                                                      */
+/* ------------------------------------------------------------------ */
 
 export function Checkbox({
   checked,
   onChange,
   label,
   disabled,
+  indeterminate,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   label: string;
   disabled?: boolean;
+  indeterminate?: boolean;
 }) {
   return (
     <label className={cn("inline-flex cursor-pointer items-center", disabled && "cursor-not-allowed opacity-40")}>
@@ -157,16 +168,20 @@ export function Checkbox({
       />
       <span
         className={cn(
-          "grid size-4 place-items-center rounded-[5px] border transition-colors",
-          "peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-white dark:peer-focus-visible:ring-offset-zinc-950",
-          checked
-            ? "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500 dark:text-zinc-950"
-            : "border-slate-300 bg-white text-transparent hover:border-slate-400 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500",
+          "grid size-[14px] place-items-center rounded-[3px] border transition-colors",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-brand/50 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-surface",
+          checked || indeterminate
+            ? "border-ink bg-ink text-paper"
+            : "border-line-strong bg-surface text-transparent hover:border-ink-3",
         )}
       >
-        <svg viewBox="0 0 12 12" className="size-[10px]" fill="none" stroke="currentColor" strokeWidth={2.6}>
-          <path d="M2 6.2 4.6 8.8 10 3.4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        {indeterminate && !checked ? (
+          <span className="h-[1.5px] w-[7px] rounded-full bg-paper" />
+        ) : (
+          <svg viewBox="0 0 12 12" className="size-[9px]" fill="none" stroke="currentColor" strokeWidth={2.6}>
+            <path d="M2 6.2 4.6 8.8 10 3.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
       </span>
     </label>
   );
@@ -174,6 +189,78 @@ export function Checkbox({
 
 export function Label({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-zinc-400", className)}>{children}</div>
+    <div className={cn("text-[10px] font-semibold tracking-[0.09em] text-ink-3 uppercase", className)}>
+      {children}
+    </div>
+  );
+}
+
+/** Shared field chrome so every input, select and textarea matches. */
+export const FIELD =
+  "w-full rounded-[5px] border border-line-strong bg-surface px-2.5 py-1.5 text-[13px] text-ink placeholder:text-ink-3 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:opacity-50";
+
+export function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  size = "sm",
+  label,
+}: {
+  value: T;
+  options: { value: T; label: string; icon?: LucideIcon }[];
+  onChange: (v: T) => void;
+  size?: "xs" | "sm";
+  label?: string;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      className="inline-flex items-center rounded-[5px] border border-line bg-sunken p-[2px]"
+    >
+      {options.map((o) => {
+        const active = o.value === value;
+        const Icon = o.icon;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-[3px] font-medium whitespace-nowrap transition-colors",
+              size === "xs" ? "px-2 py-[3px] text-[11px]" : "px-2.5 py-1 text-[11.5px]",
+              active
+                ? "bg-surface text-ink shadow-[0_1px_2px_rgb(0_0_0/0.06)] ring-1 ring-line"
+                : "text-ink-3 hover:text-ink",
+            )}
+          >
+            {Icon && <Icon size={12} strokeWidth={2} />}
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Hairline key/value row used across the summary and metadata blocks. */
+export function MetaRow({
+  k,
+  v,
+  mono,
+  className,
+}: {
+  k: string;
+  v: ReactNode;
+  mono?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-baseline justify-between gap-4 py-[3px]", className)}>
+      <span className="shrink-0 text-[11.5px] text-ink-3">{k}</span>
+      <span className={cn("truncate text-right text-[11.5px] text-ink-2", mono && "font-mono text-[11px]")}>{v}</span>
+    </div>
   );
 }

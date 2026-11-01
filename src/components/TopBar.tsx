@@ -1,154 +1,205 @@
-import { useEffect, useState } from "react";
-import { Anchor, Clock, Moon, RefreshCw, Scale, ShieldCheck, Sun, TrendingUp, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, LogOut, Menu, Moon, Scale, Sun, UserCheck, X } from "lucide-react";
 import { KPB, OPERATOR } from "../data/constants";
-import { LIVE_MARKET_FX, fetchLiveRates, refreshFx, subscribeFx } from "../lib/fx";
-import { fmtClock } from "../lib/format";
+import { FX, LIVE_MARKET_FX, refreshFx, subscribeFx } from "../lib/fx";
 import { cn } from "../lib/cn";
-import { Btn, Pill } from "./ui";
+import { Btn } from "./ui";
 import type { AuthUser } from "../lib/auth";
+import type { Page } from "../App";
 
-function Rate({
-  pair,
-  value,
-  delta,
-  onClick,
-}: {
-  pair: string;
-  value: string;
-  delta: string;
-  onClick?: () => void;
-}) {
-  const down = delta.startsWith("-");
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-baseline gap-1.5 cursor-pointer hover:opacity-85 transition-opacity"
-      title="Click to view Live Market Spot vs Statutory KMK Customs Rates"
-    >
-      <span className="font-mono text-[11px] tracking-tight text-slate-500 dark:text-zinc-400">{pair}</span>
-      <span className="tnum text-[12.5px] font-semibold text-slate-900 dark:text-zinc-100">{value}</span>
-      <span
-        className={cn(
-          "tnum text-[10.5px] font-medium inline-flex items-center gap-0.5",
-          down ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400",
-        )}
-      >
-        {down ? "−" : "+"}
-        {delta.replace(/^[+-]/, "")}
-      </span>
-    </button>
-  );
-}
+const NAV: { key: Page; label: string }[] = [
+  { key: "home", label: "Overview" },
+  { key: "features", label: "Capabilities" },
+  { key: "pricing", label: "Pricing" },
+  { key: "contact", label: "Contact" },
+  { key: "sources", label: "Sources" },
+];
 
 export function TopBar({
+  page,
+  onNavigate,
   agent,
   user,
   theme = "light",
   onToggleTheme,
+  onLogout,
   onOpenLegal,
 }: {
+  page: Page;
+  onNavigate: (p: Page) => void;
   agent: { text: string; tone: "idle" | "busy" | "ready" };
   user?: AuthUser | null;
-  onLogout?: () => void;
   theme?: "light" | "dark";
   onToggleTheme?: () => void;
+  onLogout?: () => void;
   onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
 }) {
-  const [now, setNow] = useState(() => new Date());
   const [, force] = useState(0);
-  const [showFxModal, setShowFxModal] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsub = subscribeFx(() => force((n) => n + 1));
     refreshFx();
-    const interval = setInterval(() => refreshFx(), 30000);
+    const interval = setInterval(() => refreshFx(), 60000);
     return () => {
       unsub();
       clearInterval(interval);
     };
   }, []);
 
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    await fetchLiveRates();
-    setTimeout(() => setIsRefreshing(false), 600);
-  };
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
-  const displayName = user?.name || OPERATOR.user;
-  const displayRole = user?.role || OPERATOR.role;
-  const initials = displayName
-    .split(" ")
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "DT";
+  useEffect(() => {
+    if (!navOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) setNavOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setNavOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [navOpen]);
+
+  /** Every route, in one place, so the sheet and the tab strip cannot drift. */
+  const routes: { key: Page; label: string }[] = [{ key: "terminal", label: "Terminal" }, ...NAV];
+
+  const name = user?.name || OPERATOR.user;
+  const role = user?.role || OPERATOR.role;
+  const initials =
+    name
+      .split(" ")
+      .map((w) => w[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "DT";
 
   return (
-    <header className="relative z-30 flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 text-slate-800 shadow-2xs backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/90 dark:text-zinc-100 sm:px-4 xl:px-6 sm:gap-3 xl:gap-5">
-      <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
-        <div className="grid size-8 place-items-center rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.12)] dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400">
-          <Anchor size={16} strokeWidth={2.2} />
-        </div>
-        <div className="leading-tight">
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] font-bold tracking-tight text-slate-900 dark:text-white">PortSync FTZ</span>
-            <span className="rounded border border-emerald-500/30 bg-emerald-50 px-1.5 py-px font-mono text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-              v1.0
-            </span>
-          </div>
-          <div className="hidden text-[11px] text-slate-500 dark:text-zinc-400 xl:block">Batam Automated Customs &amp; Tariff Agent</div>
-        </div>
-      </div>
-
-      <div className="hidden h-6 w-px shrink-0 bg-slate-200 dark:bg-zinc-800 md:block" />
-
-      <div className="hidden shrink-0 items-center gap-2.5 xl:gap-4 md:flex">
-        <span className="flex items-center gap-2">
-          <span className="relative grid size-2 place-items-center">
-            <span className="absolute size-2 animate-blip rounded-full bg-emerald-500 dark:bg-emerald-400" />
-            <span className="size-2 rounded-full bg-emerald-500/40" />
-          </span>
-          <span className="hidden text-[11px] font-medium tracking-wider text-slate-500 uppercase 2xl:inline dark:text-zinc-400">
-            Kurs KMK 16.200
-          </span>
+    <header className="relative z-40 flex h-12 shrink-0 items-center gap-4 border-b border-line bg-surface px-3 sm:px-4">
+      <button
+        type="button"
+        onClick={() => onNavigate("home")}
+        className="flex shrink-0 cursor-pointer items-center gap-2"
+        aria-label="PortSync FTZ home"
+      >
+        <span className="grid size-[22px] place-items-center rounded-[4px] bg-ink">
+          <span className="display text-[13px] leading-none text-paper">P</span>
         </span>
-        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-2 py-1 font-mono text-xs text-slate-800 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-200">
-          <Rate
-            pair="USD/IDR"
-            value={LIVE_MARKET_FX.spotUsdIdr.toLocaleString("id-ID")}
-            delta={LIVE_MARKET_FX.deltaUsdPct}
-            onClick={() => setShowFxModal(true)}
-          />
-        </div>
-        <div className="hidden h-4 w-px bg-slate-200 dark:bg-zinc-800 lg:block" />
-        <div className="hidden rounded-md border border-slate-200 bg-slate-50/80 px-2 py-1 font-mono text-xs text-slate-800 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-200 lg:block">
-          <Rate
-            pair="SGD/IDR"
-            value={LIVE_MARKET_FX.spotSgdIdr.toLocaleString("id-ID")}
-            delta={LIVE_MARKET_FX.deltaSgdPct}
-            onClick={() => setShowFxModal(true)}
-          />
-        </div>
-      </div>
+        <span className="flex items-baseline gap-1.5">
+          <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">PortSync</span>
+          <span className="hidden font-mono text-[10px] tracking-[0.08em] text-ink-3 sm:inline">FTZ</span>
+        </span>
+      </button>
+
+      <span className="hidden h-4 w-px shrink-0 bg-line md:block" />
+
+      <nav className="hidden items-center md:flex" aria-label="Primary">
+        <button
+          type="button"
+          onClick={() => onNavigate("terminal")}
+          className={cn(
+            "h-12 cursor-pointer border-b-2 px-2.5 text-[12.5px] transition-colors",
+            page === "terminal"
+              ? "border-ink font-medium text-ink"
+              : "border-transparent text-ink-2 hover:text-ink",
+          )}
+        >
+          Terminal
+        </button>
+        {NAV.map((n) => (
+          <button
+            key={n.key}
+            type="button"
+            onClick={() => onNavigate(n.key)}
+            className={cn(
+              "h-12 cursor-pointer border-b-2 px-2.5 text-[12.5px] transition-colors",
+              page === n.key ? "border-ink font-medium text-ink" : "border-transparent text-ink-2 hover:text-ink",
+            )}
+          >
+            {n.label}
+          </button>
+        ))}
+      </nav>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => setNavOpen((v) => !v)}
+          className="grid size-7 cursor-pointer place-items-center rounded-[5px] text-ink-2 transition-colors hover:bg-sunken hover:text-ink md:hidden"
+          aria-expanded={navOpen}
+          aria-controls="mobile-nav"
+          aria-label="Menu"
+        >
+          {navOpen ? <X size={15} strokeWidth={2} /> : <Menu size={15} strokeWidth={2} />}
+        </button>
+
+        {page === "terminal" && (
+          <div className="hidden items-center gap-1.5 lg:flex" title={`${KPB.regulation} · ${KPB.customsOffice}`}>
+            <span
+              className={cn(
+                "size-[5px] rounded-full",
+                agent.tone === "ready" ? "bg-ok" : agent.tone === "busy" ? "bg-warn" : "bg-ink-3",
+              )}
+            />
+            <span className="font-mono text-[10.5px] whitespace-nowrap text-ink-3">{agent.text}</span>
+          </div>
+        )}
+
+        <div
+          className="hidden items-center gap-1.5 border-l border-line pl-3 xl:flex"
+          title={
+            LIVE_MARKET_FX.isLive
+              ? `Duty is computed on the statutory kurs pabean (${FX.USD_IDR.toLocaleString("id-ID")}). Market spot is ${LIVE_MARKET_FX.spotUsdIdr.toLocaleString("id-ID")} via ${LIVE_MARKET_FX.source} — shown for reference only, never used in the declaration.`
+              : `${LIVE_MARKET_FX.source}. Showing the statutory kurs pabean used for duty (${FX.USD_IDR.toLocaleString("id-ID")}).`
+          }
+        >
+          <span className="font-mono text-[10.5px] text-ink-3">USD/IDR</span>
+          <span className="tnum font-mono text-[10.5px] text-ink-2">
+            {FX.USD_IDR.toLocaleString("id-ID")}
+          </span>
+          <span className="font-mono text-[10px] text-ink-3">kurs pabean</span>
+          {LIVE_MARKET_FX.isLive && (
+            <span className="ml-1 font-mono text-[10px] text-ink-3">
+              · spot {LIVE_MARKET_FX.spotUsdIdr.toLocaleString("id-ID")}
+            </span>
+          )}
+        </div>
+
+        {page !== "terminal" && (
+          <span className="hidden lg:block">
+            <Btn size="sm" variant="primary" onClick={() => onNavigate("terminal")}>
+              Open terminal
+            </Btn>
+          </span>
+        )}
+
         {onOpenLegal && (
           <button
             type="button"
             onClick={() => onOpenLegal("disclaimer")}
-            className="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-[11.5px] font-medium text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer xl:flex"
-            title="Review Statutory Compliance, Terms of Service & Privacy Policy"
+            className="hidden size-7 cursor-pointer items-center justify-center rounded-[5px] text-ink-3 transition-colors hover:bg-sunken hover:text-ink lg:grid"
+            title="Legal, terms and privacy"
+            aria-label="Legal and compliance"
           >
-            <Scale size={13} className="text-blue-600 dark:text-cyan-400" />
-            <span>Legal &amp; Compliance</span>
+            <Scale size={14} strokeWidth={1.9} />
           </button>
         )}
 
@@ -156,176 +207,121 @@ export function TopBar({
           <button
             type="button"
             onClick={onToggleTheme}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-[11.5px] font-medium text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-900 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer"
-            title={`Switch to ${theme === "light" ? "Dark" : "Bright"} theme`}
-            aria-label="Toggle theme"
+            className="grid size-7 cursor-pointer place-items-center rounded-[5px] text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
+            title={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
+            aria-label="Toggle colour theme"
           >
-            {theme === "light" ? (
-              <>
-                <Moon size={13} className="text-slate-600" />
-                <span className="hidden md:inline">Dark</span>
-              </>
-            ) : (
-              <>
-                <Sun size={13} className="text-amber-400" />
-                <span className="hidden md:inline">Bright</span>
-              </>
-            )}
+            {theme === "light" ? <Moon size={14} strokeWidth={1.9} /> : <Sun size={14} strokeWidth={1.9} />}
           </button>
         )}
 
-        <div
-          className="hidden items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-50 px-3 py-1.5 dark:bg-emerald-500/10 2xl:flex"
-          title={`${KPB.regulation} · ${KPB.customsOffice}`}
-        >
-          <ShieldCheck size={14} strokeWidth={2.2} className="text-emerald-600 dark:text-emerald-400" />
-          <div className="leading-tight">
-            <div className="text-[12px] whitespace-nowrap font-medium text-emerald-800 dark:text-emerald-300">{KPB.region}</div>
-            <div className="tnum text-[10.5px] whitespace-nowrap text-slate-500 dark:text-zinc-400">
-              {KPB.kodeKawasan} · {KPB.authority}
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-line py-[3px] pr-1.5 pl-[3px] transition-colors hover:border-line-strong"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+          >
+            <span className="grid size-[19px] place-items-center rounded-[3px] bg-sunken font-mono text-[9.5px] font-semibold text-ink-2">
+              {initials}
+            </span>
+            <ChevronDown size={11} className="text-ink-3" />
+          </button>
+
+          {menuOpen && (
+            <div
+              role="menu"
+              className="animate-rise absolute top-[calc(100%+6px)] right-0 w-60 overflow-hidden rounded-[6px] border border-line bg-surface shadow-[var(--shadow-modal)]"
+            >
+              <div className="border-b border-line px-3 py-2.5">
+                <div className="text-[12.5px] font-medium text-ink">{name}</div>
+                <div className="mt-0.5 text-[11px] leading-snug text-ink-3">{role}</div>
+                {user?.licenseNo ? (
+                  <div className="mt-1.5 font-mono text-[10px] text-ink-3">{user.licenseNo}</div>
+                ) : user?.local ? (
+                  <div className="mt-1.5 font-mono text-[10px] text-warn">
+                    local session · credentials not verified
+                  </div>
+                ) : null}
+              </div>
+              <div className="p-1">
+                {!user && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onNavigate("login");
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-[12px] text-ink-2 hover:bg-sunken hover:text-ink"
+                  >
+                    <UserCheck size={13} strokeWidth={2} /> Sign in
+                  </button>
+                )}
+                {onOpenLegal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onOpenLegal("disclaimer");
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-[12px] text-ink-2 hover:bg-sunken hover:text-ink"
+                  >
+                    <Scale size={13} strokeWidth={2} /> Legal &amp; disclaimer
+                  </button>
+                )}
+                {user && onLogout && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-[12px] text-ink-2 hover:bg-sunken hover:text-ink"
+                  >
+                    <LogOut size={13} strokeWidth={2} /> Sign out
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
-
-        <div className="flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-1.5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/80">
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              agent.tone === "busy" ? "animate-blip bg-blue-500 dark:bg-cyan-400" : agent.tone === "ready" ? "bg-emerald-500 dark:bg-emerald-400" : "bg-slate-400 dark:bg-zinc-500",
-            )}
-          />
-          <span className="hidden text-[12px] whitespace-nowrap text-slate-700 sm:inline dark:text-zinc-300">{agent.text}</span>
-        </div>
-
-        <div className="hidden items-center gap-1.5 text-slate-500 2xl:flex dark:text-zinc-400">
-          <Clock size={13} />
-          <span className="tnum text-[12px] text-slate-700 dark:text-zinc-300">{fmtClock(now)} WIB</span>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/80 py-1 pr-3 pl-1 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/80">
-          <div className="grid size-7 place-items-center rounded-md bg-emerald-100 text-[11px] font-bold text-emerald-800 dark:bg-zinc-800 dark:text-emerald-400">
-            {initials}
-          </div>
-          <div className="hidden leading-tight 2xl:block">
-            <div className="text-[12px] font-medium text-slate-800 dark:text-zinc-200">{displayName}</div>
-            <div className="text-[10.5px] text-slate-500 dark:text-zinc-400">{displayRole}</div>
-          </div>
-        </div>
-
-        <Pill tone="mut" className="shrink-0" title="This build never transmits to a customs system.">
-          SANDBOX
-        </Pill>
       </div>
 
-      {showFxModal && (
+      {navOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          onClick={() => setShowFxModal(false)}
+          id="mobile-nav"
+          ref={navRef}
+          className="animate-rise absolute inset-x-0 top-12 border-b border-line bg-surface shadow-[var(--shadow-modal)] md:hidden"
         >
-          <div
-            className="animate-pop w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="grid size-9 place-items-center rounded-lg border border-emerald-500/30 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-                  <TrendingUp size={18} />
-                </div>
-                <div>
-                  <h3 className="text-[15px] font-bold text-slate-900 dark:text-zinc-100">
-                    Live FX Rates &amp; Statutory Customs KMK
-                  </h3>
-                  <div className="text-[11.5px] text-slate-500 dark:text-zinc-400">
-                    Auto-polled every 30s · Last updated {LIVE_MARKET_FX.lastUpdated} WIB
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowFxModal(false)}
-                className="grid size-7 place-items-center rounded-md border border-slate-200 text-slate-400 hover:text-slate-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-white cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 dark:border-zinc-800 dark:bg-zinc-950/60">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                  <span>USD / IDR</span>
-                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
-                    LIVE SPOT MARKET
-                  </span>
-                </div>
-                <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-zinc-100">
-                  Rp {LIVE_MARKET_FX.spotUsdIdr.toLocaleString("id-ID")}
-                </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-                  <span>Intraday Movement:</span>
-                  <span className="font-mono">{LIVE_MARKET_FX.deltaUsdPct}</span>
-                </div>
-                <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-zinc-800/80 flex items-center justify-between text-[11.5px] text-slate-600 dark:text-zinc-400">
-                  <span>Statutory KMK Rate:</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">Rp 16.200</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-[10.5px] text-slate-500 dark:text-zinc-500">
-                  <span>Spread vs KMK:</span>
-                  <span className="font-mono font-medium text-amber-700 dark:text-amber-400">
-                    +Rp {(LIVE_MARKET_FX.spotUsdIdr - 16200).toLocaleString("id-ID")} (+{(((LIVE_MARKET_FX.spotUsdIdr - 16200) / 16200) * 100).toFixed(1)}%)
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 dark:border-zinc-800 dark:bg-zinc-950/60">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                  <span>SGD / IDR</span>
-                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
-                    LIVE SPOT MARKET
-                  </span>
-                </div>
-                <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-zinc-100">
-                  Rp {LIVE_MARKET_FX.spotSgdIdr.toLocaleString("id-ID")}
-                </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-                  <span>Intraday Movement:</span>
-                  <span className="font-mono">{LIVE_MARKET_FX.deltaSgdPct}</span>
-                </div>
-                <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-zinc-800/80 flex items-center justify-between text-[11.5px] text-slate-600 dark:text-zinc-400">
-                  <span>Statutory KMK Rate:</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">Rp 12.150</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-[10.5px] text-slate-500 dark:text-zinc-500">
-                  <span>Spread vs KMK:</span>
-                  <span className="font-mono font-medium text-amber-700 dark:text-amber-400">
-                    +Rp {(LIVE_MARKET_FX.spotSgdIdr - 12150).toLocaleString("id-ID")} (+{(((LIVE_MARKET_FX.spotSgdIdr - 12150) / 12150) * 100).toFixed(1)}%)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-lg border border-blue-500/20 bg-blue-50/60 p-3 text-[11.5px] leading-relaxed text-slate-700 dark:border-cyan-500/30 dark:bg-cyan-950/30 dark:text-zinc-300">
-              <span className="font-semibold text-blue-900 dark:text-cyan-300">Why are there two exchange rates?</span>
-              <ul className="mt-1.5 space-y-1 list-disc list-inside">
-                <li><strong className="text-slate-800 dark:text-zinc-200">Live Spot Market (18k+ / 14k+):</strong> Real-time interbank forex rate used by commercial banks and importers to pay international suppliers.</li>
-                <li><strong className="text-slate-800 dark:text-zinc-200">Statutory Kurs KMK (16.200 / 12.150):</strong> Under Indonesian customs regulation (PP No. 41/2021 jo. PMK Kepabeanan), PPFTZ-01 and PIB customs declarations legally calculate Bea Masuk and PPN using the active Ministry of Finance decree rate (Kurs Pajak Kemenkeu).</li>
-              </ul>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition-colors disabled:opacity-60 cursor-pointer dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-              >
-                <RefreshCw size={13} className={isRefreshing ? "animate-spin" : ""} />
-                {isRefreshing ? "Fetching Rates…" : "Refresh Live Rates"}
-              </button>
-              <Btn size="sm" variant="primary" onClick={() => setShowFxModal(false)}>
-                Done
-              </Btn>
-            </div>
-          </div>
+          {routes.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => {
+                setNavOpen(false);
+                onNavigate(r.key);
+              }}
+              className={cn(
+                "flex h-11 w-full cursor-pointer items-center border-b border-line px-4 text-left text-[13px] transition-colors last:border-b-0",
+                page === r.key ? "bg-sunken font-medium text-ink" : "text-ink-2 hover:bg-sunken/60 hover:text-ink",
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+          {!user && (
+            <button
+              type="button"
+              onClick={() => {
+                setNavOpen(false);
+                onNavigate("login");
+              }}
+              className="flex h-11 w-full cursor-pointer items-center border-t border-line px-4 text-left text-[13px] text-ink-2 transition-colors hover:bg-sunken/60 hover:text-ink"
+            >
+              Sign in
+            </button>
+          )}
         </div>
       )}
     </header>

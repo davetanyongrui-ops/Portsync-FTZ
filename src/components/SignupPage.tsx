@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ShieldCheck, UserPlus } from "lucide-react";
 import { signUp } from "../lib/auth";
+import { Btn, FIELD, Label } from "./ui";
 
 export function SignupPage({
   onSignedUp,
@@ -20,7 +20,7 @@ export function SignupPage({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError("Use at least six characters.");
       return;
     }
     setLoading(true);
@@ -28,94 +28,136 @@ export function SignupPage({
     const res = await signUp(name, email, password);
     setLoading(false);
     if (res.ok) onSignedUp();
-    else setError(res.error || "Signup failed.");
+    else setError(res.error || "Could not create the account.");
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 text-slate-800 antialiased dark:bg-zinc-950 dark:text-zinc-100">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/90">
-        <div className="flex items-center gap-3">
-          <div className="grid size-10 place-items-center rounded-lg border border-slate-200 bg-slate-100 text-blue-600 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400">
-            <ShieldCheck size={20} />
-          </div>
-          <div>
-            <div className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">PortSync FTZ</div>
-            <div className="text-[12px] text-slate-500 dark:text-zinc-400">Create your workspace account</div>
-          </div>
-        </div>
-        <form onSubmit={submit} className="mt-6 space-y-4">
-          <div>
-            <label className="text-[12px] font-medium text-slate-700 dark:text-zinc-300">Full name</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-            />
-          </div>
-          <div>
-            <label className="text-[12px] font-medium text-slate-700 dark:text-zinc-300">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-            />
-          </div>
-          <div>
-            <label className="text-[12px] font-medium text-slate-700 dark:text-zinc-300">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-            />
-          </div>
-          {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{error}</div>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:opacity-60 cursor-pointer dark:bg-cyan-500 dark:text-zinc-950 dark:hover:bg-cyan-400"
-          >
-            <UserPlus size={15} /> {loading ? "Creating…" : "Create account"}
-          </button>
-        </form>
-        <div className="mt-4 text-center text-[12px] text-slate-500 dark:text-zinc-400">
-          Already have an account?{" "}
-          <button type="button" onClick={onSwitchToLogin} className="font-medium text-blue-600 hover:text-blue-700 cursor-pointer dark:text-cyan-400 dark:hover:text-cyan-300">
-            Sign in
-          </button>
+    <div className="grid min-h-full lg:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="hidden flex-col justify-between border-r border-line bg-sunken/50 p-10 lg:flex">
+        <button type="button" onClick={onSwitchToLogin} className="flex w-fit cursor-pointer items-center gap-2">
+          <span className="grid size-[22px] place-items-center rounded-[4px] bg-ink">
+            <span className="display text-[13px] leading-none text-paper">P</span>
+          </span>
+          <span className="text-[13px] font-semibold text-ink">PortSync FTZ</span>
+        </button>
+
+        <div className="max-w-[380px]">
+          <p className="display text-[26px] leading-[1.15] text-ink">One workspace per broker licence.</p>
+          <p className="mt-4 text-[12px] leading-[1.7] text-ink-2">
+            Consignments, overrides and the declaration history stay attached to the account, so a colleague picking up
+            the desk can see why a line was classified the way it was.
+          </p>
         </div>
 
-        <div className="mt-5 text-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-500 border-t border-slate-100 pt-3 dark:border-zinc-800/80">
-          By registering, you agree to our{" "}
-          <button
-            type="button"
-            onClick={() => onOpenLegal?.("tos")}
-            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
-          >
-            Terms of Service
-          </button>
-          ,{" "}
-          <button
-            type="button"
-            onClick={() => onOpenLegal?.("privacy")}
-            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
-          >
-            Privacy Policy
-          </button>
-          , and{" "}
-          <button
-            type="button"
-            onClick={() => onOpenLegal?.("disclaimer")}
-            className="text-slate-700 underline hover:text-blue-600 dark:text-zinc-300 dark:hover:text-cyan-300 cursor-pointer"
-          >
-            Statutory Disclaimer
-          </button>
-          .
+        <div className="font-mono text-[10px] leading-relaxed text-ink-3">
+          account records live in local storage in this build
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-[330px]">
+          <div className="lg:hidden">
+            <button type="button" onClick={onSwitchToLogin} className="flex cursor-pointer items-center gap-2">
+              <span className="grid size-[22px] place-items-center rounded-[4px] bg-ink">
+                <span className="display text-[13px] leading-none text-paper">P</span>
+              </span>
+              <span className="text-[13px] font-semibold text-ink">PortSync FTZ</span>
+            </button>
+          </div>
+
+          <h1 className="mt-6 text-[16px] font-medium tracking-[-0.01em] text-ink lg:mt-0">Create an account</h1>
+          <p className="mt-1 text-[11.5px] text-ink-3">No card, no verification in this build</p>
+
+          <form onSubmit={submit} className="mt-5 space-y-3.5">
+            <div>
+              <label htmlFor="s-name">
+                <Label>Full name</Label>
+              </label>
+              <input
+                id="s-name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Dewi Tan"
+                className={`mt-1.5 ${FIELD}`}
+              />
+            </div>
+            <div>
+              <label htmlFor="s-email">
+                <Label>Email</Label>
+              </label>
+              <input
+                id="s-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="broker@company.id"
+                className={`mt-1.5 ${FIELD}`}
+              />
+            </div>
+            <div>
+              <label htmlFor="s-pass">
+                <Label>Password</Label>
+              </label>
+              <input
+                id="s-pass"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="at least six characters"
+                className={`mt-1.5 ${FIELD}`}
+              />
+            </div>
+
+            {error && (
+              <p className="rounded-[4px] border border-bad/30 bg-bad-soft px-2 py-1.5 text-[11px] text-bad">{error}</p>
+            )}
+
+            <Btn type="submit" variant="primary" block disabled={loading}>
+              {loading ? "Creating…" : "Create account"}
+            </Btn>
+          </form>
+
+          <div className="mt-4 text-[11px] text-ink-3">
+            Already registered?{" "}
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="cursor-pointer text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink"
+            >
+              Sign in
+            </button>
+          </div>
+
+          <p className="mt-6 border-t border-line pt-3 text-[10px] leading-[1.6] text-ink-3">
+            By registering you accept the{" "}
+            <button
+              type="button"
+              onClick={() => onOpenLegal?.("tos")}
+              className="cursor-pointer text-ink-2 underline decoration-line-strong underline-offset-2"
+            >
+              terms
+            </button>
+            , the{" "}
+            <button
+              type="button"
+              onClick={() => onOpenLegal?.("privacy")}
+              className="cursor-pointer text-ink-2 underline decoration-line-strong underline-offset-2"
+            >
+              trade data policy
+            </button>{" "}
+            and the{" "}
+            <button
+              type="button"
+              onClick={() => onOpenLegal?.("disclaimer")}
+              className="cursor-pointer text-ink-2 underline decoration-line-strong underline-offset-2"
+            >
+              statutory disclaimer
+            </button>
+            .
+          </p>
         </div>
       </div>
     </div>
