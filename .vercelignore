@@ -2,6 +2,7 @@ dist/
 index.zip
 videos/
 .qa/
-scripts/
+scripts/*
+!scripts/copy-pdf-worker.mjs
 server/
 *.log
