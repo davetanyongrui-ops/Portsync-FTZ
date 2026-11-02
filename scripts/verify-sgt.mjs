@@ -109,6 +109,18 @@ for (let i = 0; i < 30; i++) {
 }
 check("document parsed to line items (no Nothing to declare)", ready);
 check("failure toast not shown", !/Nothing to declare/i.test(text));
+// The original-document preview renders the PDF through the same polyfilled
+// worker; on engines without the ES2025 Map upsert methods it used to fail
+// with "getOrInsertComputed is not a function" while parsing still worked.
+const preview = await evalJs(`(() => {
+  const canvases = document.querySelectorAll('canvas');
+  return {
+    canvases: canvases.length,
+    painted: [...canvases].filter(c => c.width > 100 && c.height > 100).length,
+    failed: /only the preview failed/i.test(document.body.innerText),
+  };
+})()`);
+check("document preview canvas rendered", !preview.failed && preview.painted >= 1, JSON.stringify(preview));
 await shot("sgt-parsed.png");
 
 check("row 01 inverter read", /String inverter 100 kW/i.test(text));

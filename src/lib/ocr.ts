@@ -2,14 +2,15 @@ import * as pdfjsLib from "pdfjs-dist";
 import { createWorker, type Worker as TessWorker } from "tesseract.js";
 
 /**
- * pdf.js 6.4 fingerprints documents with `Uint8Array.prototype.toHex()` — an
- * ES2025 method that recent engines ship but older browsers (and Node) do not.
- * Without it the PDF worker throws `hashOriginal.toHex is not a function` and
- * every upload fails. The worker runs in its own realm, so a main-thread
- * polyfill cannot reach it: we prepend one to the worker source and serve the
- * result as a blob URL.
+ * pdf.js 6.4 needs ES2025 APIs that recent engines ship but older browsers do
+ * not: `Uint8Array.prototype.toHex()` for document fingerprinting and the Map
+ * upsert pair (`getOrInsert` / `getOrInsertComputed`) in the rendering and
+ * font-caching code. Without them every upload fails, or worse — the document
+ * parses but every canvas preview dies. The worker runs in its own realm, so
+ * a main-thread polyfill cannot reach it: we prepend one to the worker source
+ * and serve the result as a blob URL.
  */
-const U8_HEX_POLYFILL = `
+const ES2025_POLYFILL = `
 if (typeof Uint8Array !== "undefined" && !Uint8Array.prototype.toHex) {
   Uint8Array.prototype.toHex = function () {
     let out = "";
@@ -23,6 +24,18 @@ if (typeof Uint8Array !== "undefined" && !Uint8Array.fromHex) {
     const out = new Uint8Array(clean.length / 2);
     for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
     return out;
+  };
+}
+if (typeof Map !== "undefined" && !Map.prototype.getOrInsert) {
+  Map.prototype.getOrInsert = function (key, value) {
+    if (!this.has(key)) this.set(key, value);
+    return this.get(key);
+  };
+}
+if (typeof Map !== "undefined" && !Map.prototype.getOrInsertComputed) {
+  Map.prototype.getOrInsertComputed = function (key, callback) {
+    if (!this.has(key)) this.set(key, callback(key));
+    return this.get(key);
   };
 }
 `;
@@ -45,7 +58,7 @@ async function loadPatchedWorkerSrc(): Promise<string> {
         const res = await fetch(PDF_WORKER_URL);
         if (!res.ok) throw new Error(String(res.status));
         const src = await res.text();
-        const blob = new Blob([`${U8_HEX_POLYFILL}\n${src}`], { type: "text/javascript" });
+        const blob = new Blob([`${ES2025_POLYFILL}\n${src}`], { type: "text/javascript" });
         return URL.createObjectURL(blob);
       } catch {
         // Same-origin fetch of our own public asset should not fail; if it
@@ -185,8 +198,14 @@ function prepareCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
 /* PDF helpers                                                          */
 /* ------------------------------------------------------------------ */
 
-async function openPdf(file: File) {
-  const buf = await file.arrayBuffer();
+/**
+ * Open a PDF with the polyfilled worker. Every pdf.js entry point in the app
+ * must go through this — a direct getDocument call would run either the raw
+ * worker (no polyfills, ES2025 crashes on older engines) or, in dev, the
+ * Vite-transformed worker that cannot load at all.
+ */
+export async function openPdf(file: File | ArrayBuffer) {
+  const buf = file instanceof ArrayBuffer ? file : await file.arrayBuffer();
   // Swap in the polyfilled worker before the first document opens.
   pdfjsLib.GlobalWorkerOptions.workerSrc = await loadPatchedWorkerSrc();
   return pdfjsLib.getDocument({ data: buf, useSystemFonts: true }).promise;

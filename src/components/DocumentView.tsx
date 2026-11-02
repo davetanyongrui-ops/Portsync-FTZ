@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { FileText, Minus, Plus } from "lucide-react";
+import { openPdf } from "../lib/ocr";
 import { cn } from "../lib/cn";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 /**
  * The document the user actually handed us.
@@ -62,7 +59,10 @@ export function DocumentView({
         }
 
         const buf = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: buf, useSystemFonts: true }).promise;
+        // Must go through the shared loader: the polyfilled worker is what
+        // makes preview rendering work on engines without the ES2025 Map and
+        // typed-array methods pdf.js 6.4 uses.
+        const pdf = await openPdf(buf);
         const out: HTMLCanvasElement[] = [];
 
         for (let i = 1; i <= pdf.numPages; i += 1) {

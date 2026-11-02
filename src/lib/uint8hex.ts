@@ -1,8 +1,15 @@
 /**
- * ES2025 typed-array hex methods, polyfilled because pdf.js 6.4 fingerprints
- * documents with `Uint8Array.prototype.toHex()` — an API recent engines ship
- * but older browsers do not. The PDF *worker* realm gets the same polyfill
- * prepended to its source in `ocr.ts`; this covers the main thread.
+ * ES2025 polyfills required by pdf.js 6.4 on engines that predate the spec:
+ *
+ *   - `Uint8Array.prototype.toHex()` / `Uint8Array.fromHex()` — used to
+ *     fingerprint documents.
+ *   - `Map.prototype.getOrInsert()` / `getOrInsertComputed()` — the upsert
+ *     proposal, used by the rendering/font-caching code. Missing here, a
+ *     document still PARSES but every canvas preview fails with
+ *     "this[#t].getOrInsertComputed is not a function".
+ *
+ * The PDF *worker* realm gets the same polyfills prepended to its source in
+ * `ocr.ts`; this module covers the main thread.
  */
 
 declare global {
@@ -11,6 +18,10 @@ declare global {
   }
   interface Uint8ArrayConstructor {
     fromHex(hex: string): Uint8Array;
+  }
+  interface Map<K, V> {
+    getOrInsert(key: K, value: V): V;
+    getOrInsertComputed(key: K, callback: (key: K) => V): V;
   }
 }
 
@@ -30,6 +41,27 @@ if (typeof ctor.fromHex !== "function") {
     const out = new Uint8Array(clean.length / 2);
     for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
     return out;
+  };
+}
+
+interface MapExtras {
+  getOrInsert?: (key: unknown, value: unknown) => unknown;
+  getOrInsertComputed?: (key: unknown, callback: (key: unknown) => unknown) => unknown;
+}
+const mapProto = Map.prototype as unknown as MapExtras;
+
+if (typeof mapProto.getOrInsert !== "function") {
+  mapProto.getOrInsert = function (key, value) {
+    const self = this as Map<unknown, unknown>;
+    if (!self.has(key)) self.set(key, value);
+    return self.get(key);
+  };
+}
+if (typeof mapProto.getOrInsertComputed !== "function") {
+  mapProto.getOrInsertComputed = function (key, callback) {
+    const self = this as Map<unknown, unknown>;
+    if (!self.has(key)) self.set(key, callback(key));
+    return self.get(key);
   };
 }
 
