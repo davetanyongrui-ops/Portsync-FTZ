@@ -90,8 +90,28 @@ async function evalJs(expr) {
   if (r.exceptionDetails) throw new Error(r.exceptionDetails.text + " :: " + expr.slice(0, 120));
   return r.result.value;
 }
+/** Wait until the app has actually mounted (file input exists) — fixed sleeps race on cold machines. */
+async function waitReady(maxMs = 20000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < maxMs) {
+    if (await evalJs(`!!document.querySelector('input[type="file"]')`)) return true;
+    await sleep(500);
+  }
+  return false;
+}
 async function gotoLines() {
-  await evalJs(`[...document.querySelectorAll('button')].find(b => /^Lines \\(\\d*\\)?$/.test((b.textContent || '').trim()))?.click()`);
+  // Poll until the tab button exists, then click — the default tab is Summary.
+  const t0 = Date.now();
+  while (Date.now() - t0 < 10000) {
+    const clicked = await evalJs(`(() => {
+      const b = [...document.querySelectorAll('button')].find(b => /^Lines \\(\\d*\\)?$/.test((b.textContent || '').trim()));
+      if (!b) return false;
+      b.click();
+      return true;
+    })()`);
+    if (clicked) break;
+    await sleep(500);
+  }
   await sleep(350);
 }
 async function shot(name) {
@@ -101,7 +121,8 @@ async function shot(name) {
 
 // ---------------------------------------------------------------- idle state
 await goto(APP_URL);
-await sleep(1200);
+if (!(await waitReady())) throw new Error("app never mounted (no file input)");
+await sleep(500);
 await shot("01-idle.png");
 
 await gotoLines(); // regulatory idle copy lives on the Lines tab now
@@ -171,7 +192,8 @@ fs.writeFileSync(pngPath, Buffer.from(pngData, "base64"));
 check("scanned fixture written", fs.statSync(pngPath).size > 20000, `${Math.round(fs.statSync(pngPath).size / 1024)} kB`);
 
 await goto(APP_URL);
-await sleep(1200);
+if (!(await waitReady())) throw new Error("app never mounted (no file input)");
+await sleep(500);
 
 // Hand the file to the real <input type="file"> through CDP.
 const { root } = await S("DOM.getDocument", { depth: -1 });

@@ -85,6 +85,8 @@ export interface InvoiceLine {
   ftz_exemption_eligible?: boolean;
   /** Set when part of the line is released straight onward to TPBD (mainland). */
   releaseNote?: string;
+  /** Line amount as printed on the document (USD), when the row carried one. */
+  docAmountUsd?: number;
   /** OCR detection span within the document page, as a fraction of page width. */
   span: { x: number; w: number };
   ocrNote?: string;
@@ -126,6 +128,8 @@ export interface DemoInvoice {
   };
   lines: InvoiceLine[];
   footnotes: string[];
+  /** Grand total as stated on the document (USD), when one was readable. */
+  docTotalUsd?: number;
 }
 
 /* ---------- computed ---------- */
@@ -150,7 +154,8 @@ export type BadgeKind =
   | "asset"
   | "unclassified"
   | "preference"
-  | "rate-range";
+  | "rate-range"
+  | "figure";
 
 export interface RegulatoryBadge {
   kind: BadgeKind;
@@ -211,6 +216,8 @@ export interface LineCalc {
   isExcise: boolean;
   isAsset: boolean;
   hasMasterlist?: boolean;
+  /** qty × unit price disagrees with the amount printed on the document. */
+  figureMismatch: boolean;
   /** Preferential option the agent identified. */
   fta: { scheme: string; bmRate: number; deltaVsMfn: number };
 }

@@ -391,6 +391,10 @@ function buildLine(pos: number, item: ParsedItem, origin: string): InvoiceLine {
     candidates: cls.candidates,
     ftzCoverage: 1,
     ftz_exemption_eligible: true,
+    // The amount as printed on the row is ground truth for reconciliation:
+    // qty × unit price is recomputed from it, and disagreement between the two
+    // is how a mis-recognised digit announces itself.
+    docAmountUsd: item.amount,
     span: { x: 0.045, w: 0.6 },
     ocrNote: cls.unclassified
       ? "No heading matched — classify by hand."
@@ -483,6 +487,36 @@ export function parseRawInvoice(text: string, meta: SourceMeta): DemoInvoice | n
   }
 
   const origin = detectOrigin(text);
+
+  /* ---- stated totals (for the OCR sanity check) ---- */
+  // The document's own grand total is the checksum the line figures must add
+  // up to. FOB is the lines-only figure; CIF includes carriage, so when only a
+  // CIF total exists we subtract the stated freight and insurance first.
+  let docFobUsd: number | undefined;
+  let docCifUsd: number | undefined;
+  let freightStatedUsd: number | undefined;
+  for (const l of lines) {
+    const t = l.match(
+      /^(?:grand\s+)?total\s+(fob|cif|amount|invoice|value)\b[^\d]{0,60}?(\d[\d.,]*)/i,
+    );
+    if (t) {
+      const v = toNumber(t[2]!);
+      if (Number.isFinite(v)) {
+        if (/cif/i.test(t[1]!)) docCifUsd = v;
+        else docFobUsd = v;
+      }
+    }
+    const f = l.match(/^(?:ocean\s+freight|freight|shipping\s+cost|shipping)\b[^\d]{0,50}?(\d[\d.,]*)/i);
+    if (f) {
+      const v = toNumber(f[1]!);
+      if (Number.isFinite(v)) freightStatedUsd = v;
+    }
+  }
+  const docTotalUsd =
+    docFobUsd ??
+    (docCifUsd !== undefined && freightStatedUsd !== undefined
+      ? Math.round((docCifUsd - freightStatedUsd) * 100) / 100
+      : docCifUsd);
 
   /* ---- line items ---- */
   const items: ParsedItem[] = [];
@@ -609,5 +643,6 @@ export function parseRawInvoice(text: string, meta: SourceMeta): DemoInvoice | n
       originNote,
       `Classified against ${TARIFF.length} headings in the BTKI 2022 register. Rows below 70% confidence need a human decision.`,
     ],
+    docTotalUsd,
   };
 }

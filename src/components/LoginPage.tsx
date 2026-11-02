@@ -154,12 +154,16 @@ export function LoginPage({
             <button
               type="button"
               onClick={onSwitchToSignup}
-              className="cursor-pointer text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink"
+              className="-my-2 cursor-pointer py-2 text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink"
             >
               Create an account
             </button>
             {onGuestAccess && (
-              <button type="button" onClick={onGuestAccess} className="cursor-pointer hover:text-ink">
+              <button
+                type="button"
+                onClick={onGuestAccess}
+                className="-my-2 cursor-pointer py-2 hover:text-ink"
+              >
                 Skip for now
               </button>
             )}

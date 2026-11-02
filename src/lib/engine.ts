@@ -2,6 +2,7 @@ import { findTariff, TARIFF, UNCLASSIFIED, type FtaScheme, type TariffEntry } fr
 import { PPN_RATE, PPH22_RATE } from "../data/constants";
 import { getDestination, type Treatment } from "../data/destinations";
 import { FX } from "./fx";
+import { fmtUsd } from "./format";
 import type {
   DeclarationTotals,
   DemoInvoice,
@@ -193,6 +194,17 @@ export function computeLine(
   const treatment = ctx.treatment;
   const hasMasterlist = Boolean(ctx.hasMasterlist);
 
+  /* ---- OCR figure reconciliation ---- */
+  // The row's printed amount is the checksum for its own quantity and unit
+  // price. When qty × unit price disagrees beyond rounding, a digit was
+  // mis-recognised (a lost comma turned $5,100.00 into $510,000.00 in
+  // testing) — flag the row rather than pricing a number nobody checked.
+  const docAmount = line.docAmountUsd;
+  const figureMismatch =
+    docAmount !== undefined &&
+    docAmount > 0 &&
+    Math.abs(usdCif - docAmount) > Math.max(1, docAmount * 0.02);
+
   /* ---- no heading: refuse to invent a rate ---- */
   if (!entry) {
     return {
@@ -233,6 +245,7 @@ export function computeLine(
       blocked: false,
       unclassified: true,
       rateExact: false,
+      figureMismatch: false,
       ftz_exemption_eligible: false,
       isExcise: false,
       isAsset: false,
@@ -292,6 +305,15 @@ export function computeLine(
         ? "MEDIUM"
         : entry.risk;
 
+  const badges = buildBadges(entry, coverage, bmadRate, scheme, hasPreference);
+  if (figureMismatch) {
+    badges.push({
+      kind: "figure",
+      label: "Check figures",
+      detail: `Quantity × unit price gives ${fmtUsd(usdCif)} but the document prints ${fmtUsd(docAmount!)}. One of the recognised numbers is likely wrong — edit the quantity or unit price in the line row to correct it.`,
+    });
+  }
+
   return {
     id: line.id,
     pos: line.pos,
@@ -327,11 +349,12 @@ export function computeLine(
     pph22: Math.round(pph22 * residual),
     coverage,
     lartas: entry.lartas,
-    badges: buildBadges(entry, coverage, bmadRate, scheme, hasPreference),
+    badges,
     risk,
     blocked: entry.lartas === "PRE_BORDER",
     unclassified: false,
     rateExact: entry.bmExact,
+    figureMismatch,
     ftz_exemption_eligible: !isExcise,
     isExcise,
     isAsset: entry.hs.startsWith("9401") || entry.hs.startsWith("9403"),

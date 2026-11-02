@@ -1,5 +1,6 @@
 import type { LineCalc, DeclarationTotals } from "../types";
-import { fmtIdrShort } from "../lib/format";
+import { fmtIdrShort, fmtUsd } from "../lib/format";
+import { TriangleAlert } from "lucide-react";
 
 /**
  * The plain-language result, read in one glance:
@@ -16,12 +17,14 @@ export function TaxSummary({
   totals,
   ready,
   destination,
+  docCheck,
 }: {
   calcs: LineCalc[];
   selectedIds: Set<string>;
   totals: DeclarationTotals;
   ready: boolean;
   destination: string;
+  docCheck: { stated: number; computed: number } | null;
 }) {
   if (!ready) {
     return (
@@ -46,6 +49,7 @@ export function TaxSummary({
     (c) => c.ftz.total > 1 && c.standard.total - c.ftz.total <= 1 && c.deferred <= 1,
   );
   const needsCode = sel.filter((c) => c.unclassified);
+  const mismatched = calcs.filter((c) => c.figureMismatch);
 
   const nowSum = (list: LineCalc[]) => list.reduce((n, c) => n + c.ftz.total, 0);
   const reduction = totals.standard.total - totals.ftz.total;
@@ -82,6 +86,34 @@ export function TaxSummary({
 
   return (
     <section aria-label="Tax summary" className="space-y-3 pb-6">
+      {/* ------------------------------------- OCR figure sanity banner */}
+      {docCheck && (
+        <div className="flex items-start gap-2 rounded-[7px] border border-warn/40 bg-warn-soft px-3 py-2.5">
+          <TriangleAlert size={14} strokeWidth={2.2} className="mt-0.5 shrink-0 text-warn" />
+          <p className="text-[11.5px] leading-relaxed text-ink">
+            <span className="font-medium">These figures may contain OCR errors.</span> The recognised lines add up to{" "}
+            <span className="tnum font-mono">{fmtUsd(docCheck.computed)}</span>, but the document itself states{" "}
+            <span className="tnum font-mono">{fmtUsd(docCheck.stated)}</span>. Open the{" "}
+            <span className="font-medium">Lines</span> tab, find the amber{" "}
+            <span className="font-mono text-[10px]">check qty × price</span> rows and type the correct number directly
+            into the table — every total here updates the moment you do.
+          </p>
+        </div>
+      )}
+      {mismatched.length > 0 && !docCheck && (
+        <div className="flex items-start gap-2 rounded-[7px] border border-warn/40 bg-warn-soft px-3 py-2.5">
+          <TriangleAlert size={14} strokeWidth={2.2} className="mt-0.5 shrink-0 text-warn" />
+          <p className="text-[11.5px] leading-relaxed text-ink">
+            <span className="font-medium">
+              {mismatched.length} line{mismatched.length > 1 ? "s" : ""} may have been misread.
+            </span>{" "}
+            The quantity times the unit price does not match the amount printed on the row. Open the{" "}
+            <span className="font-medium">Lines</span> tab and correct the amber rows — type the number straight into
+            the table.
+          </p>
+        </div>
+      )}
+
       {/* ------------------------------------------------------ groups */}
       <div className="divide-y divide-line overflow-hidden rounded-[7px] border border-line bg-surface">
         <Group
@@ -144,7 +176,8 @@ export function TaxSummary({
           </div>
           <p className="pt-0.5 text-[10px] leading-relaxed text-ink-3">
             Includes PPh 22 {fmtIdrShort(totals.pph22)}. "Not taxed here" means nothing is collected at this entry
-            point — suspended duty can still fall due if the goods leave the zone.
+            point — suspended duty can still fall due if the goods leave the zone. Rates are the BTKI 2022 schedule
+            (World Bank WITS snapshot); confirm the current tariff book before filing.
           </p>
         </div>
       </div>

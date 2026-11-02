@@ -15,6 +15,22 @@ import path from "node:path";
 
 /** HS6 codes worth carrying in the register: industrial inputs plus common consumer lines. */
 const HS6 = [
+  // 32/35/38 — paints, sealants, adhesives, chemicals
+  "320890", "321410", "350691", "381800", "382499",
+  // 39 — more plastics: pipe, film, tape, bags, caps, safety headgear
+  "391722", "391723", "391910", "391990", "392321", "392350", "392620",
+  // 40/42/48/64/65/71 — belts, bags, labels, footwear, hats, jewellery
+  "401011", "420212", "482110", "640399", "650500", "711719",
+  // 73 — chain
+  "731511",
+  // 82 — wrenches, saw blades, other hand tools, tool kits
+  "820241", "820411", "820412", "820559", "820600",
+  // 84 — spray, lifting, cranes, rigs, screening, couplings
+  "842420", "842489", "842511", "842641", "843061", "847420", "847910", "848360",
+  // 85 — generators, vacuums, furnaces, welding, LED, machines n.e.s.
+  "850212", "850220", "850811", "851430", "851531", "851580", "853950", "854370",
+  // 87/90/94/96 — tractors, bicycles, trailers, instruments, bedding, flasks
+  "870192", "871200", "871639", "901890", "902780", "903084", "940490", "940511", "940540", "961700",
   // 22 — beverages / alcohol (excise)
   "220710", "220820", "220830", "220890",
   // 33/34 — cosmetics, soap

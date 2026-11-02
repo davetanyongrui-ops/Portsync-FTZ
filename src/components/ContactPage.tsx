@@ -230,7 +230,7 @@ export function ContactPage({
           <button
             type="button"
             onClick={() => onNavigate("terminal")}
-            className="inline-flex cursor-pointer items-center gap-1.5 text-[11.5px] text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink"
+            className="-my-2 inline-flex cursor-pointer items-center gap-1.5 py-2 text-[11.5px] text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink"
           >
             Skip the form — open the terminal
           </button>

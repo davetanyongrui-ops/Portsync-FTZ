@@ -126,6 +126,7 @@ const BADGE_VIEW: Record<RegulatoryBadge["kind"], { tone: Tone; icon: LucideIcon
   unclassified: { tone: "bad", icon: CircleHelp },
   preference: { tone: "ok", icon: Percent },
   "rate-range": { tone: "warn", icon: CircleAlert },
+  figure: { tone: "warn", icon: AlertTriangle },
 };
 
 export function RegBadgeView({ badge }: { badge: RegulatoryBadge }) {

@@ -97,7 +97,7 @@ export function TopBar({
       <button
         type="button"
         onClick={() => onNavigate("home")}
-        className="flex shrink-0 cursor-pointer items-center gap-2"
+        className="-my-2 flex shrink-0 cursor-pointer items-center gap-2 px-1 py-2"
         aria-label="PortSync FTZ home"
       >
         <span className="grid size-[22px] place-items-center rounded-[4px] bg-ink">

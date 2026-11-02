@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, MapPin, Scale, ShieldCheck } from "lucide-react";
-import type { DeclarationTotals, DemoInvoice, LineCalc } from "../types";
+import type { DeclarationTotals, DemoInvoice, InvoiceLine, LineCalc } from "../types";
 import { schemeFor } from "../lib/engine";
 import { fmtIdr } from "../lib/format";
 import { DESTINATIONS, type Destination } from "../data/destinations";
@@ -31,6 +31,8 @@ export function RightPanel({
   onToggle,
   onSelectAll,
   onOverride,
+  onEditLine,
+  docCheck,
   onDownloadXml,
   onDownloadCsv,
   onOpenPayload,
@@ -49,6 +51,8 @@ export function RightPanel({
   onToggle: (id: string) => void;
   onSelectAll: (on: boolean) => void;
   onOverride: (id: string, hs: string) => void;
+  onEditLine: (id: string, patch: Partial<Pick<InvoiceLine, "qty" | "unitCifUsd">>) => void;
+  docCheck: { stated: number; computed: number } | null;
   onDownloadXml: () => void;
   onDownloadCsv: () => void;
   onOpenPayload: () => void;
@@ -119,6 +123,8 @@ export function RightPanel({
             onToggle={onToggle}
             onSelectAll={onSelectAll}
             onOverride={onOverride}
+            onEditLine={onEditLine}
+            docCheck={docCheck}
             onToggleMasterlist={onToggleMasterlist}
           />
         )}
@@ -132,6 +138,7 @@ export function RightPanel({
                 totals={totals}
                 ready={ready}
                 destination={destination.office ?? destination.port}
+                docCheck={docCheck}
               />
             </div>
           </div>

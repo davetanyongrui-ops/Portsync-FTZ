@@ -15,7 +15,7 @@ import { FeaturesPage } from "./components/FeaturesPage";
 import { PricingPage } from "./components/PricingPage";
 import { ContactPage } from "./components/ContactPage";
 import { SourcesPage } from "./components/SourcesPage";
-import { getInvoice, registerInvoice } from "./data/invoice-store";
+import { getInvoice, registerInvoice, updateLine } from "./data/invoice-store";
 import { parseRawInvoice, type SourceMeta } from "./lib/parser";
 import { extractDocument, type ExtractProgress } from "./lib/ocr";
 import { DEFAULT_DESTINATION, getDestination } from "./data/destinations";
@@ -28,6 +28,7 @@ import { fmtIdr, fmtUsd } from "./lib/format";
 import { cn } from "./lib/cn";
 import { getInitialTheme, setThemeInStorage, type Theme } from "./lib/theme";
 import type { Overrides } from "./lib/engine";
+import type { InvoiceLine } from "./types";
 
 const FILE_BASE = (docNo: string) => docNo.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
 const selectAllOf = (ids: string[]) => Object.fromEntries(ids.map((id) => [id, true]));
@@ -62,6 +63,8 @@ export default function App() {
   const [modal, setModal] = useState<ModalPayload | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [destinationId, setDestinationId] = useState(DEFAULT_DESTINATION.id);
+  /** Bumped when a stored line is corrected, so the memoised invoice recomputes. */
+  const [docVersion, setDocVersion] = useState(0);
   const [reading, setReading] = useState<ExtractProgress | null>(null);
   const [, setFxTick] = useState(0);
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
@@ -78,7 +81,7 @@ export default function App() {
   const timers = useRef<number[]>([]);
   const toastSeq = useRef(0);
 
-  const invoice = useMemo(() => getInvoice(invoiceId), [invoiceId]);
+  const invoice = useMemo(() => getInvoice(invoiceId), [invoiceId, docVersion]);
 
   const selectedSet = useMemo(
     () => new Set(Object.entries(selectedMap).filter(([, on]) => on).map(([id]) => id)),
@@ -218,6 +221,39 @@ export default function App() {
       setSelectedMap(invoice ? Object.fromEntries(invoice.lines.map((l) => [l.id, on])) : {}),
     [invoice],
   );
+
+  /** Correct an OCR-misread quantity or unit price; everything downstream recomputes.
+   * The corrected figures become the line's reference amount — the human has
+   * verified the row, so its reconciliation flag clears. */
+  const editLine = useCallback(
+    (lineId: string, patch: Partial<Pick<InvoiceLine, "qty" | "unitCifUsd">>) => {
+      if (!invoiceId) return;
+      const line = getInvoice(invoiceId)?.lines.find((l) => l.id === lineId);
+      if (!line) return;
+      const qty = patch.qty ?? line.qty;
+      const unit = patch.unitCifUsd ?? line.unitCifUsd;
+      updateLine(invoiceId, lineId, {
+        ...patch,
+        docAmountUsd: Math.round(qty * unit * 100) / 100,
+      });
+      setDocVersion((v) => v + 1);
+    },
+    [invoiceId],
+  );
+
+  /**
+   * Document-level OCR checksum: the line figures against the total the
+   * document itself states. A disagreement means at least one recognised
+   * number is wrong even when each row reconciles internally.
+   */
+  const docCheck = useMemo(() => {
+    if (!invoice?.docTotalUsd || totals.usdCif <= 0) return null;
+    const stated = invoice.docTotalUsd;
+    const computed = totals.usdCif;
+    return Math.abs(computed - stated) > Math.max(1, stated * 0.02)
+      ? { stated, computed }
+      : null;
+  }, [invoice, totals.usdCif]);
 
   const overrideLine = useCallback(
     (id: string, hs: string) => {
@@ -576,6 +612,8 @@ export default function App() {
               onToggle={toggleLine}
               onSelectAll={selectAll}
               onOverride={overrideLine}
+              onEditLine={editLine}
+              docCheck={docCheck}
               onDownloadXml={downloadXml}
               onDownloadCsv={downloadCsv}
               onOpenPayload={openPayload}

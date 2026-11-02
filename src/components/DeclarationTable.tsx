@@ -1,9 +1,9 @@
-import { useMemo, type ReactNode } from "react";
-import { Lock } from "lucide-react";
-import type { LineCalc, RegulatoryBadge } from "../types";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Lock, TriangleAlert } from "lucide-react";
+import type { InvoiceLine, LineCalc, RegulatoryBadge } from "../types";
 import { hsOptions } from "../lib/engine";
 import { REGISTER_SIZE, TARIFF } from "../data/tariff";
-import { fmtIdrShort, fmtQty, fmtUsd } from "../lib/format";
+import { fmtIdrShort, fmtUsd } from "../lib/format";
 import { cn } from "../lib/cn";
 import { Checkbox, RegBadgeView, Tag } from "./ui";
 
@@ -33,6 +33,7 @@ const SHORT_FLAG: Partial<Record<RegulatoryBadge["kind"], string>> = {
   ad: "Anti-dumping",
   tkdn: "TKDN",
   asset: "Asset",
+  figure: "Check figures",
 };
 
 function flagLabel(b: RegulatoryBadge) {
@@ -48,6 +49,48 @@ function Th({ children, className }: { children: ReactNode; className?: string }
   );
 }
 
+/**
+ * A recognised figure the user can correct in place. OCR mis-reads are real —
+ * the value commits on blur or Enter so a half-typed edit never prices a line.
+ */
+function NumInput({
+  value,
+  onCommit,
+  label,
+  width = "w-[64px]",
+}: {
+  value: number;
+  onCommit: (n: number) => void;
+  label: string;
+  width?: string;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+  const commit = () => {
+    const n = Number(draft.replace(/,/g, ""));
+    if (Number.isFinite(n) && n > 0 && n !== value) onCommit(n);
+    else setDraft(String(value));
+  };
+  return (
+    <input
+      aria-label={label}
+      title={label}
+      inputMode="decimal"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      onClick={(e) => e.stopPropagation()}
+      className={cn(
+        "tnum rounded-[3px] border border-transparent bg-transparent px-1 py-0 text-right font-mono text-[10.5px] text-ink-2 outline-none transition-colors hover:border-line-strong focus:border-ink-3 focus:bg-surface focus:text-ink",
+        width,
+      )}
+    />
+  );
+}
+
 function Row({
   c,
   selected,
@@ -55,6 +98,7 @@ function Row({
   onActive,
   onToggle,
   onOverride,
+  onEditLine,
   onToggleMasterlist,
 }: {
   c: LineCalc;
@@ -63,6 +107,7 @@ function Row({
   onActive: (id: string | null) => void;
   onToggle: (id: string) => void;
   onOverride: (id: string, hs: string) => void;
+  onEditLine: (id: string, patch: Partial<Pick<InvoiceLine, "qty" | "unitCifUsd">>) => void;
   onToggleMasterlist?: (id: string) => void;
 }) {
   const options = useMemo(() => hsOptions(c.line), [c.line]);
@@ -110,10 +155,23 @@ function Row({
               <span className="text-line-strong">/</span>
               <span>{c.line.origin}</span>
               <span className="text-line-strong">/</span>
-              <span className="tnum">
-                {fmtQty(c.qty)} {c.uom}
-                {c.line.netKg > 0 && <> · {c.line.netKg} kg</>}
+              <span className="tnum inline-flex items-baseline gap-0.5" onClick={(e) => e.stopPropagation()}>
+                <NumInput
+                  value={c.qty}
+                  width="w-[52px]"
+                  label={`Quantity for line ${c.pos}`}
+                  onCommit={(n) => onEditLine(c.id, { qty: n })}
+                />
+                <span>{c.uom}</span>
               </span>
+              {c.figureMismatch && (
+                <span
+                  className="inline-flex items-center gap-1 text-warn"
+                  title={`Qty × unit price gives ${fmtUsd(c.usdCif)} but the document prints ${fmtUsd(c.line.docAmountUsd ?? 0)}.`}
+                >
+                  <TriangleAlert size={9} strokeWidth={2.5} /> check qty × price
+                </span>
+              )}
               {c.blocked && (
                 <span className="inline-flex items-center gap-1 text-bad">
                   <Lock size={9} strokeWidth={2.5} /> blocked
@@ -188,6 +246,18 @@ function Row({
 
       <td className={cn(TD, "text-right")}>
         <div className="tnum text-[12.5px] font-medium text-ink">${fmtUsd(c.usdCif).replace("$ ", "")}</div>
+        <div
+          className="mt-0.5 flex items-baseline justify-end gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <NumInput
+            value={c.unitCifUsd}
+            width="w-[72px]"
+            label={`Unit price for line ${c.pos}`}
+            onCommit={(n) => onEditLine(c.id, { unitCifUsd: n })}
+          />
+          <span className="shrink-0 font-mono text-[9px] text-ink-3">/unit</span>
+        </div>
         <div className="tnum mt-0.5 font-mono text-[10px] text-ink-3">{fmtIdrShort(c.idrCif)}</div>
       </td>
 
@@ -257,6 +327,7 @@ function StackedRow({
   onActive,
   onToggle,
   onOverride,
+  onEditLine,
 }: {
   c: LineCalc;
   selected: boolean;
@@ -264,6 +335,7 @@ function StackedRow({
   onActive: (id: string | null) => void;
   onToggle: (id: string) => void;
   onOverride: (id: string, hs: string) => void;
+  onEditLine: (id: string, patch: Partial<Pick<InvoiceLine, "qty" | "unitCifUsd">>) => void;
 }) {
   const options = useMemo(() => hsOptions(c.line), [c.line]);
 
@@ -296,9 +368,23 @@ function StackedRow({
             <span className="text-line-strong">/</span>
             <span>{c.line.origin}</span>
             <span className="text-line-strong">/</span>
-            <span className="tnum">
-              {fmtQty(c.qty)} {c.uom}
+            <span className="tnum inline-flex items-baseline gap-0.5" onClick={(e) => e.stopPropagation()}>
+              <NumInput
+                value={c.qty}
+                width="w-[52px]"
+                label={`Quantity for line ${c.pos}`}
+                onCommit={(n) => onEditLine(c.id, { qty: n })}
+              />
+              <span>{c.uom}</span>
             </span>
+            {c.figureMismatch && (
+              <span
+                className="inline-flex items-center gap-1 text-warn"
+                title={`Qty × unit price gives ${fmtUsd(c.usdCif)} but the document prints ${fmtUsd(c.line.docAmountUsd ?? 0)}.`}
+              >
+                <TriangleAlert size={9} strokeWidth={2.5} /> check qty × price
+              </span>
+            )}
           </div>
 
           <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -317,8 +403,16 @@ function StackedRow({
                 </option>
               ))}
             </select>
-            <span className="tnum shrink-0 font-mono text-[11.5px] font-medium text-ink">
-              ${fmtUsd(c.usdCif).replace("$ ", "")}
+            <span className="tnum inline-flex shrink-0 items-baseline gap-1">
+              <NumInput
+                value={c.unitCifUsd}
+                width="w-[64px]"
+                label={`Unit price for line ${c.pos}`}
+                onCommit={(n) => onEditLine(c.id, { unitCifUsd: n })}
+              />
+              <span className="font-mono text-[11.5px] font-medium text-ink">
+                ${fmtUsd(c.usdCif).replace("$ ", "")}
+              </span>
             </span>
           </div>
 
@@ -357,6 +451,8 @@ export function DeclarationTable({
   onToggle,
   onSelectAll,
   onOverride,
+  onEditLine,
+  docCheck,
   onToggleMasterlist,
 }: {
   calcs: LineCalc[];
@@ -367,6 +463,8 @@ export function DeclarationTable({
   onToggle: (id: string) => void;
   onSelectAll: (on: boolean) => void;
   onOverride: (id: string, hs: string) => void;
+  onEditLine: (id: string, patch: Partial<Pick<InvoiceLine, "qty" | "unitCifUsd">>) => void;
+  docCheck: { stated: number; computed: number } | null;
   onToggleMasterlist?: (id: string) => void;
 }) {
   if (!ready) {
@@ -391,10 +489,28 @@ export function DeclarationTable({
 
   const allSelected = calcs.every((c) => selectedIds.has(c.id));
   const someSelected = calcs.some((c) => selectedIds.has(c.id));
+  const mismatchCount = calcs.filter((c) => c.figureMismatch).length;
 
   return (
     <>
-      <div className="scroll-thin hidden h-full overflow-auto md:block">
+      {docCheck && (
+        <div className="flex items-start gap-2 border-b border-warn/40 bg-warn-soft px-3 py-2 text-[11.5px] leading-relaxed text-ink">
+          <TriangleAlert size={13} strokeWidth={2.2} className="mt-0.5 shrink-0 text-warn" />
+          <p>
+            <span className="font-medium">Figures may have been misread.</span> The recognised lines add up to{" "}
+            <span className="tnum font-mono">{fmtUsd(docCheck.computed)}</span> but the document states{" "}
+            <span className="tnum font-mono">{fmtUsd(docCheck.stated)}</span>. Check the amber{" "}
+            <span className="font-mono text-[10px]">check qty × price</span> rows and correct the quantity or unit price
+            directly in the table.
+          </p>
+          {mismatchCount > 0 && (
+            <span className="tnum shrink-0 self-center font-mono text-[10px] text-warn">
+              {mismatchCount} line{mismatchCount > 1 ? "s" : ""} flagged
+            </span>
+          )}
+        </div>
+      )}
+      <div className="scroll-thin hidden h-full overflow-auto md:block" style={docCheck ? { height: "calc(100% - 41px)" } : undefined}>
         <table className="w-full min-w-[660px] table-fixed border-collapse">
           <colgroup>
             {COLS.map((w, i) => (
@@ -430,6 +546,7 @@ export function DeclarationTable({
                 onActive={onActive}
                 onToggle={onToggle}
                 onOverride={onOverride}
+                onEditLine={onEditLine}
                 onToggleMasterlist={onToggleMasterlist}
               />
             ))}
@@ -437,7 +554,7 @@ export function DeclarationTable({
         </table>
       </div>
 
-      <div className="scroll-thin h-full overflow-y-auto md:hidden">
+      <div className="scroll-thin h-full overflow-y-auto md:hidden" style={docCheck ? { height: "calc(100% - 41px)" } : undefined}>
         {calcs.map((c) => (
           <StackedRow
             key={c.id}
@@ -447,6 +564,7 @@ export function DeclarationTable({
             onActive={onActive}
             onToggle={onToggle}
             onOverride={onOverride}
+            onEditLine={onEditLine}
           />
         ))}
       </div>
