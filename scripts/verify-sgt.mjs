@@ -20,8 +20,8 @@ const PORT = 9351;
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT = path.join(ROOT, ".qa-test");
 const PROFILE = path.join(os.tmpdir(), "sgt-verify-profile");
-const APP_URL = "http://localhost:5179/";
-const PDF = "C:\\Users\\davet\\Downloads\\Shenzhen GreenTech Commercial Invoice & Manifest.pdf";
+const APP_URL = process.env.APP_URL ?? "http://localhost:5179/";
+const PDF = process.env.SGT_PDF ?? "C:\\Users\\davet\\Downloads\\Shenzhen GreenTech Commercial Invoice & Manifest.pdf";
 
 fs.mkdirSync(OUT, { recursive: true });
 fs.rmSync(PROFILE, { recursive: true, force: true });

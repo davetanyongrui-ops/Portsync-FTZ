@@ -1,3 +1,4 @@
+import type { LegalDoc } from "../data/legal";
 import { ArrowRight, Check, CircleAlert, CircleHelp, FlaskConical, Laptop } from "lucide-react";
 import { Btn, Tag } from "./ui";
 import { SiteFooter } from "./SiteFooter";
@@ -92,7 +93,7 @@ export function SourcesPage({
   onOpenLegal,
 }: {
   onNavigate: (p: Page) => void;
-  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+  onOpenLegal?: (doc: LegalDoc) => void;
 }) {
   const counts = SOURCES.reduce<Record<SourceStatus, number>>(
     (acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }),

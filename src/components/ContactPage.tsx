@@ -1,3 +1,4 @@
+import type { LegalDoc } from "../data/legal";
 import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Btn, FIELD, Label } from "./ui";
@@ -18,7 +19,7 @@ export function ContactPage({
   onOpenLegal,
 }: {
   onNavigate: (p: Page) => void;
-  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+  onOpenLegal?: (doc: LegalDoc) => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

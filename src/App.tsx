@@ -4,7 +4,7 @@ import { TopBar } from "./components/TopBar";
 import { LeftPanel, PIPELINE, type AnalyzeState } from "./components/LeftPanel";
 import { LoginPage } from "./components/LoginPage";
 import { SignupPage } from "./components/SignupPage";
-import { LegalModal, type LegalDocType } from "./components/LegalModal";
+import { TermsGate } from "./components/TermsGate";
 import { getSession, logOut, type AuthUser } from "./lib/auth";
 import type { UploadedFile } from "./components/UploadZone";
 import { RightPanel } from "./components/RightPanel";
@@ -15,6 +15,9 @@ import { FeaturesPage } from "./components/FeaturesPage";
 import { PricingPage } from "./components/PricingPage";
 import { ContactPage } from "./components/ContactPage";
 import { SourcesPage } from "./components/SourcesPage";
+import { LegalPage } from "./components/LegalPage";
+import { FaqPage } from "./components/FaqPage";
+import { AboutPage } from "./components/AboutPage";
 import { getInvoice, registerInvoice, updateLine } from "./data/invoice-store";
 import { parseRawInvoice, type SourceMeta } from "./lib/parser";
 import { extractDocument, type ExtractProgress } from "./lib/ocr";
@@ -33,10 +36,10 @@ import type { InvoiceLine } from "./types";
 const FILE_BASE = (docNo: string) => docNo.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase();
 const selectAllOf = (ids: string[]) => Object.fromEntries(ids.map((id) => [id, true]));
 
-export type Page = "terminal" | "home" | "features" | "pricing" | "contact" | "sources" | "login" | "signup";
+export type Page = "terminal" | "home" | "features" | "pricing" | "contact" | "sources" | "login" | "signup" | "legal" | "faq" | "about";
 
 function pageFromHash(): Page {
-  const h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+  const h = window.location.hash.replace(/^#\/?/, "").split("?")[0]?.toLowerCase() ?? "";
   if (h === "home" || h === "overview") return "home";
   if (h === "features") return "features";
   if (h === "pricing") return "pricing";
@@ -44,6 +47,9 @@ function pageFromHash(): Page {
   if (h === "sources" || h === "provenance") return "sources";
   if (h === "login") return "login";
   if (h === "signup") return "signup";
+  if (h === "legal" || h === "disclaimer" || h === "terms") return "legal";
+  if (h === "faq" || h === "help") return "faq";
+  if (h === "about") return "about";
   return "terminal";
 }
 
@@ -66,9 +72,10 @@ export default function App() {
   /** Bumped when a stored line is corrected, so the memoised invoice recomputes. */
   const [docVersion, setDocVersion] = useState(0);
   const [reading, setReading] = useState<ExtractProgress | null>(null);
+  /** Persisted, copyable explanation of the last failed read — toasts vanish, this stays until the next attempt. */
+  const [diagnostic, setDiagnostic] = useState<{ title: string; detail: string; info: string } | null>(null);
   const [, setFxTick] = useState(0);
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
-  const [legalDoc, setLegalDoc] = useState<LegalDocType | null>(null);
 
   useEffect(() => {
     setThemeInStorage(theme);
@@ -134,6 +141,13 @@ export default function App() {
   const navigate = useCallback((p: Page) => {
     window.location.hash = p === "terminal" ? "#/" : `#/${p}`;
     setPage(p);
+  }, []);
+
+  /** Deep-link into the Legal Centre with the requested document selected. */
+  const openLegal = useCallback((doc: "disclaimer" | "tos" | "privacy" | "acceptable-use") => {
+    window.location.hash = `#/legal?doc=${doc}`;
+    setPage("legal");
+    window.scrollTo({ top: 0 });
   }, []);
 
   const triggerAnalysis = useCallback(
@@ -277,8 +291,11 @@ export default function App() {
   const handleUpload = useCallback(
     async (file: File) => {
       setReading({ phase: "reading", label: "Opening the document", pct: 0.01 });
+      setDiagnostic(null);
+      const fileInfo = `file: ${file.name}\ntype: ${file.type || "unknown"}\nsize: ${Math.round(file.size / 1024)} kB`;
       try {
         const doc = await extractDocument(file, setReading);
+        const extractInfo = `${fileInfo}\npages: ${doc.pages}\nmethod: ${doc.method}\ntext recovered: ${doc.text.trim().length} chars`;
 
         const meta: SourceMeta = {
           fileName: file.name,
@@ -295,14 +312,17 @@ export default function App() {
           // so the previous consignment stays loaded *consistently*: showing
           // the failed file's name above the old document's declaration is
           // how "nothing to declare" became "which document am I looking at".
-          pushToast({
-            tone: "bad",
-            title: `Nothing to declare in ${file.name}`,
-            detail:
-              doc.text.trim().length < 40
-                ? "No text was recovered from this file, even with OCR. Check the scan is legible and upright."
-                : "Text was recovered but no item table could be found — no line with a quantity and a unit. The previous consignment is still loaded.",
+          const title = `Nothing to declare in ${file.name}`;
+          const detail =
+            doc.text.trim().length < 40
+              ? "No text was recovered from this file, even with OCR. Check the scan is legible, straight-on and well lit, then try again."
+              : "Text was recovered but no item table could be found — no line with a quantity and a unit. The previous consignment is still loaded.";
+          setDiagnostic({
+            title,
+            detail,
+            info: `${extractInfo}\nfirst 400 chars:\n${doc.text.trim().slice(0, 400)}`,
           });
+          pushToast({ tone: "bad", title, detail });
           return;
         }
 
@@ -345,11 +365,13 @@ export default function App() {
         triggerAnalysis(parsed.id, file.name, true);
         if (window.innerWidth < 1024) setMobileView("declaration");
       } catch (err) {
-        pushToast({
-          tone: "bad",
+        const detail = err instanceof Error ? err.message : "Unexpected error while reading the file.";
+        setDiagnostic({
           title: "Document could not be read",
-          detail: err instanceof Error ? err.message : "Unexpected error while reading the file.",
+          detail,
+          info: `${fileInfo}\nerror: ${detail}`,
         });
+        pushToast({ tone: "bad", title: "Document could not be read", detail });
       } finally {
         setReading(null);
       }
@@ -497,7 +519,7 @@ export default function App() {
             logOut();
             setUser(null);
           }}
-          onOpenLegal={(doc) => setLegalDoc(doc)}
+          onOpenLegal={openLegal}
         />
       )}
 
@@ -532,11 +554,11 @@ export default function App() {
 
       {page !== "terminal" ? (
         <main className="scroll-thin min-h-0 flex-1 overflow-y-auto">
-          {page === "home" && <HomePage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
-          {page === "features" && <FeaturesPage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
-          {page === "pricing" && <PricingPage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
-          {page === "contact" && <ContactPage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
-          {page === "sources" && <SourcesPage onNavigate={navigate} onOpenLegal={(doc) => setLegalDoc(doc)} />}
+          {page === "home" && <HomePage onNavigate={navigate} onOpenLegal={openLegal} />}
+          {page === "features" && <FeaturesPage onNavigate={navigate} onOpenLegal={openLegal} />}
+          {page === "pricing" && <PricingPage onNavigate={navigate} onOpenLegal={openLegal} />}
+          {page === "contact" && <ContactPage onNavigate={navigate} onOpenLegal={openLegal} />}
+          {page === "sources" && <SourcesPage onNavigate={navigate} onOpenLegal={openLegal} />}
           {page === "login" && (
             <LoginPage
               onLoggedIn={() => {
@@ -545,7 +567,7 @@ export default function App() {
               }}
               onSwitchToSignup={() => navigate("signup")}
               onGuestAccess={() => navigate("terminal")}
-              onOpenLegal={(doc) => setLegalDoc(doc)}
+              onOpenLegal={openLegal}
             />
           )}
           {page === "signup" && (
@@ -555,9 +577,12 @@ export default function App() {
                 navigate("terminal");
               }}
               onSwitchToLogin={() => navigate("login")}
-              onOpenLegal={(doc) => setLegalDoc(doc)}
+              onOpenLegal={openLegal}
             />
           )}
+          {page === "legal" && <LegalPage onNavigate={navigate} />}
+          {page === "faq" && <FaqPage onNavigate={navigate} onOpenLegal={openLegal} />}
+          {page === "about" && <AboutPage onNavigate={navigate} onOpenLegal={openLegal} />}
         </main>
       ) : (
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
@@ -584,8 +609,10 @@ export default function App() {
                 setActiveId(null);
                 setStage(0);
                 setStatus("staged");
+                setDiagnostic(null);
               }}
               onReject={handleReject}
+              diagnostic={diagnostic}
               status={status}
               stage={stage}
               calcs={calcs}
@@ -620,7 +647,7 @@ export default function App() {
               destination={destination}
               onDestinationChange={setDestinationId}
               onToggleMasterlist={toggleMasterlist}
-              onOpenLegal={(doc) => setLegalDoc(doc)}
+              onOpenLegal={openLegal}
             />
           </div>
         </main>
@@ -644,7 +671,7 @@ export default function App() {
         </footer>
       )}
 
-      {legalDoc && <LegalModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
+      {page === "terminal" && <TermsGate onNavigate={navigate} />}
       {modal && <PayloadModal payload={modal} onClose={() => setModal(null)} onCopied={onCopied} />}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>

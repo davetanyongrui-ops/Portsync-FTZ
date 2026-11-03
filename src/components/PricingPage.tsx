@@ -1,3 +1,4 @@
+import type { LegalDoc } from "../data/legal";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Btn, Tag } from "./ui";
@@ -9,16 +10,16 @@ const PLANS = [
     name: "Sandbox",
     price: "Free",
     cadence: "no account needed",
-    blurb: "Evaluate the engine against the three preloaded consignments.",
+    blurb: "The full engine, free while in development. Bring your own invoices.",
     cta: "Open the terminal",
     page: "terminal" as Page,
     primary: false,
     features: [
-      "Three preloaded invoices",
+      "Unlimited invoices, no account",
       "BTKI classification with confidence",
       "PPFTZ-01, 02 and 03 arithmetic",
-      "CEISA JSON and XML export",
-      "Runs entirely in the browser",
+      "CEISA-shaped JSON and XML export",
+      "Runs entirely in your browser",
     ],
   },
   {
@@ -27,7 +28,7 @@ const PLANS = [
     priceAlt: "$49",
     cadence: "per user / month, billed annually",
     blurb: "For a licensed PPJK desk preparing declarations every day.",
-    cta: "Start a 14-day trial",
+    cta: "Try the free terminal",
     page: "terminal" as Page,
     primary: true,
     features: [
@@ -80,7 +81,7 @@ export function PricingPage({
   onOpenLegal,
 }: {
   onNavigate: (p: Page) => void;
-  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+  onOpenLegal?: (doc: LegalDoc) => void;
 }) {
   const [annual, setAnnual] = useState(true);
 

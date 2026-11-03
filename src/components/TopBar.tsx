@@ -1,3 +1,4 @@
+import type { LegalDoc } from "../data/legal";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut, Menu, Moon, Scale, Sun, UserCheck, X } from "lucide-react";
 import { KPB, OPERATOR } from "../data/constants";
@@ -11,6 +12,8 @@ const NAV: { key: Page; label: string }[] = [
   { key: "home", label: "Overview" },
   { key: "features", label: "Capabilities" },
   { key: "pricing", label: "Pricing" },
+  { key: "faq", label: "FAQ" },
+  { key: "about", label: "About" },
   { key: "contact", label: "Contact" },
   { key: "sources", label: "Sources" },
 ];
@@ -32,7 +35,7 @@ export function TopBar({
   theme?: "light" | "dark";
   onToggleTheme?: () => void;
   onLogout?: () => void;
-  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+  onOpenLegal?: (doc: LegalDoc) => void;
 }) {
   const [, force] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -111,7 +114,7 @@ export function TopBar({
 
       <span className="hidden h-4 w-px shrink-0 bg-line md:block" />
 
-      <nav className="hidden items-center md:flex" aria-label="Primary">
+      <nav className="hidden items-center lg:flex" aria-label="Primary">
         <button
           type="button"
           onClick={() => onNavigate("terminal")}
@@ -143,7 +146,7 @@ export function TopBar({
         <button
           type="button"
           onClick={() => setNavOpen((v) => !v)}
-          className="grid size-7 cursor-pointer place-items-center rounded-[5px] text-ink-2 transition-colors hover:bg-sunken hover:text-ink md:hidden"
+          className="grid size-7 cursor-pointer place-items-center rounded-[5px] text-ink-2 transition-colors hover:bg-sunken hover:text-ink lg:hidden"
           aria-expanded={navOpen}
           aria-controls="mobile-nav"
           aria-label="Menu"
@@ -292,7 +295,7 @@ export function TopBar({
         <div
           id="mobile-nav"
           ref={navRef}
-          className="animate-rise absolute inset-x-0 top-12 border-b border-line bg-surface shadow-[var(--shadow-modal)] md:hidden"
+          className="animate-rise absolute inset-x-0 top-12 border-b border-line bg-surface shadow-[var(--shadow-modal)] lg:hidden"
         >
           {routes.map((r) => (
             <button

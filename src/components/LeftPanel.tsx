@@ -1,4 +1,5 @@
-import { Check, Loader2, RotateCcw, Sparkle } from "lucide-react";
+import { useState } from "react";
+import { Check, Copy, Loader2, RotateCcw, Sparkle, TriangleAlert } from "lucide-react";
 import type { DemoInvoice, LineCalc } from "../types";
 import { cn } from "../lib/cn";
 import { Btn, Label } from "./ui";
@@ -18,6 +19,53 @@ export const PIPELINE = [
 
 export type AnalyzeState = "staged" | "analyzing" | "ready";
 
+export interface ReadDiagnostic {
+  title: string;
+  detail: string;
+  info: string;
+}
+
+function DiagnosticCard({ d }: { d: ReadDiagnostic }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${d.title}\n${d.detail}\n---\n${d.info}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
+  return (
+    <div className="rounded-[6px] border border-bad/35 bg-bad-soft/60 px-3 py-2.5">
+      <div className="flex items-start gap-2">
+        <TriangleAlert size={13} className="mt-[2px] shrink-0 text-bad" strokeWidth={2.2} />
+        <div className="min-w-0">
+          <div className="text-[12px] font-semibold text-ink">{d.title}</div>
+          <p className="mt-1 text-[11.5px] leading-[1.6] text-ink-2">{d.detail}</p>
+          <p className="mt-1.5 text-[11px] leading-[1.6] text-ink-3">
+            Tips: PDFs read best. For photos — flat, straight-on, well lit, all columns visible. Corrections are easy
+            afterwards, but the line table must be found first.
+          </p>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-2 pl-5">
+        <button
+          type="button"
+          onClick={copy}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[4px] border border-line bg-surface px-2 py-1 font-mono text-[10px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+        >
+          {copied ? <Check size={10} className="text-ok" /> : <Copy size={10} />}
+          {copied ? "copied" : "copy diagnostics"}
+        </button>
+        <span className="font-mono text-[9.5px] text-ink-3">paste it to us via Contact to get the file fixed</span>
+      </div>
+    </div>
+  );
+}
+
 export function LeftPanel({
   invoice,
   uploaded,
@@ -26,6 +74,7 @@ export function LeftPanel({
   onUpload,
   onClearUpload,
   onReject,
+  diagnostic,
   status,
   stage,
   calcs,
@@ -41,6 +90,7 @@ export function LeftPanel({
   onUpload: (file: File) => void;
   onClearUpload: () => void;
   onReject: (message: string) => void;
+  diagnostic: ReadDiagnostic | null;
   status: AnalyzeState;
   stage: number;
   calcs: LineCalc[];
@@ -90,18 +140,33 @@ export function LeftPanel({
           onReject={onReject}
         />
 
+        {diagnostic && (
+          <DiagnosticCard d={diagnostic} />
+        )}
+
         {!hasDocument && !reading && (
           <div className="flex flex-1 flex-col items-center justify-center rounded-[6px] border border-dashed border-line-strong px-4 py-10 text-center">
-            <div className="font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">No document</div>
-            <p className="mx-auto mt-2 max-w-[320px] text-[12px] leading-relaxed text-ink-2">
-              Load a commercial invoice to begin. Nothing is preloaded and nothing is saved — the consignment you see is
-              only ever the file you supplied.
+            <div className="font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">Three steps</div>
+            <ol className="mx-auto mt-3 max-w-[320px] space-y-2.5 text-left">
+              {[
+                ["Drop your invoice", "PDF, scan or phone photo — it stays on your device."],
+                ["Press Analyze", "The engine reads every line and matches it to the tariff book."],
+                ["Read the summary", "Taxable, reduced, not taxed — with how and why for each."],
+              ].map(([t, b], i) => (
+                <li key={t} className="flex gap-2.5">
+                  <span className="grid size-4 shrink-0 place-items-center rounded-full bg-ink font-mono text-[9px] font-semibold text-paper">
+                    {i + 1}
+                  </span>
+                  <span>
+                    <span className="block text-[12px] font-medium text-ink">{t}</span>
+                    <span className="block text-[11px] leading-snug text-ink-3">{b}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="mx-auto mt-4 max-w-[320px] text-[11px] leading-relaxed text-ink-3">
+              Nothing is saved or sent anywhere — when you close this tab, everything is gone.
             </p>
-            <ul className="mx-auto mt-3 max-w-[320px] space-y-1 text-left font-mono text-[10px] leading-relaxed text-ink-3">
-              <li>· digital PDF — text layer read directly</li>
-              <li>· scanned PDF or photo — Tesseract OCR</li>
-              <li>· needs a quantity, a unit and a unit price per line</li>
-            </ul>
           </div>
         )}
 

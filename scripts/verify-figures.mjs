@@ -61,6 +61,15 @@ await S("Page.enable"); await S("Runtime.enable");
 await S("Page.navigate", { url: APP_URL });
 for (let i = 0; i < 30; i++) { await sleep(500); if (await ev(`!!document.querySelector('input[type="file"]')`)) break; }
 
+// The first-visit TermsGate overlays the terminal and would swallow the real
+// mouse/keyboard events this test drives. Accept it the way a user does.
+const gateBtn = await ev(`(() => {
+  const b = [...document.querySelectorAll('button')].find(x => /I understand/i.test(x.textContent || ''));
+  if (b) { b.click(); return true; }
+  return false;
+})()`);
+if (gateBtn) { await sleep(400); console.log("terms gate accepted"); }
+
 const { root } = await S("DOM.getDocument", { depth: -1 });
 const { nodeId } = await S("DOM.querySelector", { nodeId: root.nodeId, selector: 'input[type="file"]' });
 await S("DOM.setFileInputFiles", { nodeId, files: [FILE] });

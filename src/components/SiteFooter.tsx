@@ -1,3 +1,4 @@
+import type { LegalDoc } from "../data/legal";
 import { KPB } from "../data/constants";
 import type { Page } from "../App";
 
@@ -5,14 +6,17 @@ const PRODUCT: [string, Page][] = [
   ["Terminal", "terminal"],
   ["Capabilities", "features"],
   ["Pricing", "pricing"],
+  ["FAQ & help", "faq"],
+  ["About", "about"],
   ["Contact", "contact"],
   ["Sources", "sources"],
 ];
 
-const LEGAL: [string, "disclaimer" | "tos" | "privacy"][] = [
-  ["Statutory disclaimer", "disclaimer"],
+const LEGAL: [string, LegalDoc][] = [
+  ["Disclaimer", "disclaimer"],
   ["Terms of service", "tos"],
-  ["Trade data", "privacy"],
+  ["Privacy & trade data", "privacy"],
+  ["Acceptable use", "acceptable-use"],
 ];
 
 export function SiteFooter({
@@ -20,7 +24,7 @@ export function SiteFooter({
   onOpenLegal,
 }: {
   onNavigate: (p: Page) => void;
-  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+  onOpenLegal?: (doc: LegalDoc) => void;
 }) {
   return (
     <footer className="border-t border-line bg-paper">
@@ -33,7 +37,8 @@ export function SiteFooter({
             <span className="text-[12.5px] font-semibold text-ink">PortSync FTZ</span>
           </div>
           <p className="mt-2.5 max-w-[220px] text-[11px] leading-[1.6] text-ink-3">
-            Customs classification and PPFTZ-01 declaration preparation for the Batam free trade zone.
+            Independent, unofficial pre-declaration estimation for the Batam free trade zone. Not affiliated with any
+            government agency. AI-assisted output — verify everything.
           </p>
         </div>
 
@@ -81,6 +86,7 @@ export function SiteFooter({
       </div>
       <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-4 gap-y-1 border-t border-line px-5 py-4 font-mono text-[10px] text-ink-3 sm:px-8">
         <span>© 2026 PT Portsync Logistics Systems</span>
+        <span className="text-warn">unofficial · AI-assisted · no guarantee</span>
         <span className="ml-auto">UU 17/2006</span>
         <span>PP 10/2012</span>
         <span>PMK 47/PMK.04/2012</span>

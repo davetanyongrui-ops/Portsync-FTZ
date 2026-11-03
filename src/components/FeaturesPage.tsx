@@ -1,3 +1,4 @@
+import type { LegalDoc } from "../data/legal";
 import { ArrowRight } from "lucide-react";
 import { Btn, Tag } from "./ui";
 import { SiteFooter } from "./SiteFooter";
@@ -85,7 +86,7 @@ export function FeaturesPage({
   onOpenLegal,
 }: {
   onNavigate: (p: Page) => void;
-  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+  onOpenLegal?: (doc: LegalDoc) => void;
 }) {
   return (
     <div className="bg-paper">

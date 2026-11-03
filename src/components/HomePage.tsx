@@ -1,3 +1,4 @@
+import type { LegalDoc } from "../data/legal";
 import { useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { REGISTER_SIZE, TARIFF, TARIFF_FETCHED, TARIFF_SOURCE } from "../data/tariff";
@@ -10,23 +11,23 @@ import type { Page } from "../App";
 const STEPS = [
   {
     n: "01",
-    title: "Ingest the document",
-    body: "Drop a commercial invoice, packing list or manifest. The text layer is read in the browser — no upload, no queue.",
+    title: "Drop your invoice in",
+    body: "A PDF or a photo of a paper invoice. It is read entirely inside your browser — the file is never uploaded to anyone.",
   },
   {
     n: "02",
-    title: "Classify every line",
-    body: "Each description is matched to an 8-digit BTKI heading with a confidence score and the alternatives that were rejected.",
+    title: "Every line gets classified",
+    body: "Each item is matched to an Indonesian tariff heading, with a confidence score and the runner-up options visible so you can check or overrule.",
   },
   {
     n: "03",
-    title: "Price the duty twice",
-    body: "MFN duty and VAT are computed on the customs value, then re-computed with the PPFTZ-01 facility applied line by line.",
+    title: "See the tax in plain language",
+    body: "What is taxable, what is not taxed inside the zone, and how much the legal relief is worth — plus how and why it applies.",
   },
   {
     n: "04",
-    title: "Screen, then file",
-    body: "Lartas, SNI, anti-dumping and excise rules run before export. The result is a CEISA-ready JSON body and XML document.",
+    title: "Fix what OCR misread",
+    body: "Wrong digit? Click the number in the table, type the correction, and every total recomputes instantly. Amber flags show exactly where to look.",
   },
 ];
 
@@ -45,7 +46,7 @@ export function HomePage({
   onOpenLegal,
 }: {
   onNavigate: (p: Page) => void;
-  onOpenLegal?: (doc: "disclaimer" | "tos" | "privacy") => void;
+  onOpenLegal?: (doc: LegalDoc) => void;
 }) {
   const [cifInput, setCifInput] = useState(120000);
   const [dutyRate, setDutyRate] = useState(10);
@@ -75,17 +76,17 @@ export function HomePage({
             </div>
 
             <h1 className="display mt-4 text-[34px] text-ink sm:text-[42px] lg:text-[46px]">
-              Classify the invoice.
+              What will this shipment
               <br />
-              Price the duty twice.
+              really cost at Batam?
               <br />
-              <span className="text-ink-3">File the declaration.</span>
+              <span className="text-ink-3">Drop the invoice. Know in seconds.</span>
             </h1>
 
             <p className="mt-5 max-w-[470px] text-[14px] leading-[1.65] text-ink-2">
-              PortSync is the pre-filing workbench for Batam's free trade zone. It reads a supplier invoice, maps every
-              line to an Indonesian tariff heading, and shows what the consignment would cost at MFN rates against what
-              it costs inside the enclave — before anything is keyed into CEISA.
+              PortSync reads your supplier invoice, classifies every line against the Indonesian tariff book, and shows
+              the duty story in plain language: what is taxable, what the Batam free zone legally removes, and what is
+              left to pay — before anyone touches CEISA.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -94,15 +95,15 @@ export function HomePage({
                 iconRight={ArrowRight}
                 onClick={() => onNavigate("terminal")}
               >
-                Open the terminal
+                Try it free — no account
               </Btn>
-              <Btn variant="secondary" onClick={() => onNavigate("features")}>
-                Read the rule set
+              <Btn variant="secondary" onClick={() => onNavigate("faq")}>
+                How it works
               </Btn>
             </div>
 
             <p className="mt-5 font-mono text-[10.5px] leading-relaxed text-ink-3">
-              Runs entirely in the browser · reference BTKI 2022 register · nothing is transmitted
+              Free · nothing is uploaded · AI-assisted estimates, not official figures — verify before you file
             </p>
           </div>
 
@@ -290,6 +291,56 @@ export function HomePage({
                 <span className="text-[11.5px] leading-[1.55] text-ink-2">{body}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------- honest */}
+      <section className="border-b border-line">
+        <div className="mx-auto max-w-[1120px] px-5 py-12 sm:px-8">
+          <div className="max-w-[560px]">
+            <div className="font-mono text-[10px] tracking-[0.1em] text-warn uppercase">Read this before you trust it</div>
+            <h2 className="display mt-3 text-[26px] text-ink sm:text-[30px]">An honest tool, stated plainly</h2>
+            <p className="mt-3 text-[12.5px] leading-[1.65] text-ink-2">
+              PortSync is independent and unofficial. It has no relationship with Indonesian Customs, BP Batam or any
+              government body. Its results come from AI and automation — which make mistakes — and nothing here is a
+              guarantee. What it is: a very fast first pass that shows its reasoning, flags what it cannot verify, and
+              leaves the judgement to you.
+            </p>
+          </div>
+
+          <div className="mt-7 grid grid-cols-1 gap-px overflow-hidden rounded-[7px] border border-line bg-line sm:grid-cols-3">
+            {[
+              {
+                t: "Not official",
+                b: "Not affiliated with, endorsed by, or working with DJBC, BP Batam, CEISA or any agency. No output is official.",
+              },
+              {
+                t: "AI makes mistakes",
+                b: "Misread digits and wrong tariff codes happen. Every line is cross-checked and flagged when figures don't reconcile.",
+              },
+              {
+                t: "You stay in charge",
+                b: "Correct any figure inline, override any code, and verify with a licensed broker before anything is filed.",
+              },
+            ].map((c) => (
+              <div key={c.t} className="bg-surface p-4">
+                <div className="text-[12.5px] font-medium text-ink">{c.t}</div>
+                <p className="mt-1.5 text-[11.5px] leading-[1.65] text-ink-2">{c.b}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Btn size="sm" variant="secondary" onClick={() => onOpenLegal?.("disclaimer")}>
+              Read the full disclaimer
+            </Btn>
+            <Btn size="sm" variant="secondary" onClick={() => onNavigate("about")}>
+              What it does — and won't
+            </Btn>
+            <Btn size="sm" variant="secondary" onClick={() => onNavigate("faq")}>
+              Common questions
+            </Btn>
           </div>
         </div>
       </section>
